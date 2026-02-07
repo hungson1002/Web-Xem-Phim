@@ -192,7 +192,7 @@
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	!function() {
-/******/ 		__webpack_require__.h = function() { return "b0125c939d4d1720"; }
+/******/ 		__webpack_require__.h = function() { return "81159b9082643155"; }
 /******/ 	}();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
@@ -830,9 +830,10 @@
 /******/ 		// [resolve, reject, Promise] = chunk loading, 0 = chunk loaded
 /******/ 		var installedChunks = __webpack_require__.hmrS_jsonp = __webpack_require__.hmrS_jsonp || {
 /******/ 			"webpack": 0,
-/******/ 			"css-app_login_auth_module_css": 0,
+/******/ 			"css-node_modules_swiper_modules_effect-fade_css-node_modules_swiper_modules_navigation_css-no-2f9504": 0,
 /******/ 			"css-app_globals_css-components_Footer_module_css-components_Navbar_module_css": 0,
-/******/ 			"css-node_modules_swiper_modules_effect-fade_css-node_modules_swiper_modules_navigation_css-no-ce2a70": 0
+/******/ 			"css-app_login_auth_module_css": 0,
+/******/ 			"css-components_BookmarkCard_module_css": 0
 /******/ 		};
 /******/ 		
 /******/ 		__webpack_require__.f.j = function(chunkId, promises) {
@@ -844,7 +845,7 @@
 /******/ 					if(installedChunkData) {
 /******/ 						promises.push(installedChunkData[2]);
 /******/ 					} else {
-/******/ 						if(/^(app(\/(((login|movies|profile)\/|)page|layout)|\-pages\-internals)|main\-app)$/.test(chunkId)) {
+/******/ 						if(/^(app(\/(((bookmarks|login|movies\/\[slug\]|profile)\/|)page|layout)|\-pages\-internals)|main\-app)$/.test(chunkId)) {
 /******/ 							// setup Promise in chunk cache
 /******/ 							var promise = new Promise(function(resolve, reject) { installedChunkData = installedChunks[chunkId] = [resolve, reject]; });
 /******/ 							promises.push(installedChunkData[2] = promise);
