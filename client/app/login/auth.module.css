@@ -1,0 +1,231 @@
+.authPage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 20px 60px;
+    background: radial-gradient(ellipse at top, #1a1a2e 0%, var(--bg-primary) 60%);
+}
+
+.authCard {
+    width: 100%;
+    max-width: 440px;
+    background: var(--bg-card);
+    backdrop-filter: blur(30px);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: 48px 40px;
+    box-shadow: var(--shadow-lg);
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+.header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.header p {
+    color: var(--text-secondary);
+}
+
+.error {
+    padding: 14px 18px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius-md);
+    color: #fca5a5;
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.success {
+    padding: 14px 18px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: var(--radius-md);
+    color: #6ee7b7;
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+.formGroup label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.formGroup input {
+    padding: 16px 18px;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+}
+
+.passwordField {
+    position: relative;
+}
+
+.passwordField input {
+    width: 100%;
+    padding-right: 70px; /* space for toggle */
+}
+
+.toggleBtn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.toggleBtn:hover {
+    color: var(--accent-primary);
+}
+
+.formGroup input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+}
+
+.formGroup input::placeholder {
+    color: var(--text-muted);
+}
+
+.forgotLink {
+    align-self: flex-end;
+    color: var(--accent-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-top: -12px;
+}
+
+.forgotLink:hover {
+    text-decoration: underline;
+}
+
+.submitBtn {
+    padding: 16px;
+    background: var(--accent-gradient);
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    margin-top: 8px;
+}
+
+.submitBtn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-glow);
+}
+
+.submitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 28px 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.divider span {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.googleBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px;
+    background: white;
+    border: none;
+    border-radius: var(--radius-md);
+    color: #333;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.googleBtn:hover {
+    background: #f5f5f5;
+    transform: translateY(-2px);
+}
+
+.googleBtn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.switchText {
+    text-align: center;
+    margin-top: 28px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.switchText a {
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.switchText a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 500px) {
+    .authCard {
+        padding: 36px 24px;
+    }
+
+    .header h1 {
+        font-size: 1.6rem;
+    }
+}

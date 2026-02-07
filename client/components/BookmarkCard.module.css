@@ -1,0 +1,94 @@
+.card {
+    background: #1a1a24;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #2a2a3a;
+}
+
+.posterLink {
+    display: block;
+}
+
+.poster {
+    position: relative;
+    aspect-ratio: 2/3;
+    background: #0d0d12;
+}
+
+.image {
+    object-fit: cover;
+}
+
+.info {
+    padding: 16px;
+}
+
+.title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 8px;
+    text-decoration: none;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.title:hover {
+    color: #e81a4b;
+}
+
+.meta {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.year {
+    color: #aaa;
+}
+
+.category {
+    color: #e81a4b;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.playButton {
+    flex: 1;
+    padding: 10px;
+    background: #e81a4b;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.playButton:hover {
+    background: #d01642;
+}
+
+.removeButton {
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid #3a3a4a;
+    color: #888;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.removeButton:hover {
+    border-color: #e81a4b;
+    color: #e81a4b;
+}

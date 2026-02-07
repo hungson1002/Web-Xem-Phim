@@ -1,0 +1,130 @@
+.page {
+    min-height: 100vh;
+    background: #000;
+    padding-top: 70px;
+}
+
+.player {
+    background: #000;
+}
+
+.playerWrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    aspect-ratio: 16/9;
+    position: relative;
+}
+
+.iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.noSource {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+}
+
+.controls {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.navBtn {
+    padding: 10px 20px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+.navBtn:hover {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+    background: var(--bg-primary);
+}
+
+.title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.currentEp {
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+}
+
+.currentEp strong {
+    color: var(--accent-primary);
+}
+
+.epSection {
+    margin-bottom: 32px;
+}
+
+.epSection h3 {
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+}
+
+.epList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.epBtn {
+    padding: 10px 18px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+.epBtn:hover {
+    border-color: var(--accent-primary);
+}
+
+.epBtn.active {
+    background: var(--accent-gradient);
+    border-color: var(--accent-primary);
+}
+
+.backLink {
+    color: var(--accent-primary);
+    font-weight: 500;
+}
+
+.notFound {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.notFound a {
+    color: var(--accent-primary);
+}
