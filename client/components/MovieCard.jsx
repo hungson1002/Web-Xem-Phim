@@ -1,9 +1,65 @@
+'use client';
+
+import { useAuth } from '@/context/AuthContext';
+import { addBookmark, checkBookmark, removeBookmark } from '@/lib/bookmarks';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import styles from './MovieCard.module.css';
 
 export default function MovieCard({ movie }) {
+    const { isAuthenticated } = useAuth();
+    const [bookmarked, setBookmarked] = useState(false);
+    const [loading, setLoading] = useState(false);
+
     const posterUrl = movie.poster_url || movie.thumb_url || '/placeholder.jpg';
+
+    // Kiểm tra trạng thái bookmark khi component mount
+    useEffect(() => {
+        if (isAuthenticated && movie._id) {
+            checkBookmark(movie._id)
+                .then(res => setBookmarked(res.isBookmarked))
+                .catch(() => { });
+        }
+    }, [isAuthenticated, movie._id]);
+
+    const handleBookmark = async (e) => {
+        e.preventDefault(); // Ngăn Link navigate
+        e.stopPropagation();
+
+        if (!isAuthenticated) {
+            toast.error('Vui lòng đăng nhập để lưu phim');
+            return;
+        }
+
+        if (loading) return;
+        setLoading(true);
+
+        try {
+            if (bookmarked) {
+                await removeBookmark(movie._id);
+                setBookmarked(false);
+                toast.success('Đã xóa khỏi danh sách yêu thích');
+            } else {
+                const bookmarkData = {
+                    movieId: movie._id,
+                    movieSlug: movie.slug,
+                    movieName: movie.name,
+                    posterUrl: movie.poster_url || movie.thumb_url,
+                    year: movie.year,
+                    category: movie.category
+                };
+                await addBookmark(bookmarkData);
+                setBookmarked(true);
+                toast.success('Đã thêm vào danh sách yêu thích');
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <Link href={`/movies/${movie.slug}`} className={styles.card}>
@@ -22,6 +78,16 @@ export default function MovieCard({ movie }) {
                         </svg>
                     </div>
                 </div>
+
+                {/* Heart bookmark button */}
+                <button
+                    className={`${styles.heartBtn} ${bookmarked ? styles.hearted : ''}`}
+                    onClick={handleBookmark}
+                    disabled={loading}
+                    aria-label={bookmarked ? 'Bỏ lưu phim' : 'Lưu phim'}
+                >
+                    {bookmarked ? '❤️' : '🤍'}
+                </button>
 
                 <div className={styles.badges}>
                     {movie.quality && (

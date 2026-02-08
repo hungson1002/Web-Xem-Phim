@@ -19,6 +19,16 @@ function MoviesContent() {
     const [totalPages, setTotalPages] = useState(1);
     const [totalMovies, setTotalMovies] = useState(0);
     const [sortBy, setSortBy] = useState('');
+    const [searchError, setSearchError] = useState('');
+
+    // Hàm xóa dấu tiếng Việt để tìm kiếm không dấu (TK03)
+    const removeVietnameseAccents = (str) => {
+        return str
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'D');
+    };
 
     const categoryFilter = searchParams.get('category') || '';
     const countryFilter = searchParams.get('country') || '';
@@ -52,7 +62,7 @@ function MoviesContent() {
                 else if (countryFilter) res = await getMoviesByCountry(countryFilter, currentPage, 20, sort);
                 else if (yearFilter) res = await getMoviesByYear(yearFilter, currentPage, 20, sort);
                 else res = await getAllMovies(currentPage, 20, sort, typeFilter);
-                
+
                 setMovies(res.data || res || []);
                 if (res.pagination) {
                     setTotalPages(res.pagination.totalPages || 1);
@@ -62,7 +72,7 @@ function MoviesContent() {
             finally { setLoading(false); }
         };
         fetchMovies();
-        
+
         if (typeof window !== 'undefined') {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -71,13 +81,13 @@ function MoviesContent() {
     const handleFilter = (type, value) => {
         setCurrentPage(1);
         const params = new URLSearchParams(searchParams);
-        
+
         if (value) {
             params.set(type, value);
         } else {
             params.delete(type);
         }
-        
+
         router.push(`/movies${params.toString() ? '?' + params.toString() : ''}`);
     };
 
@@ -106,21 +116,41 @@ function MoviesContent() {
         const maxVisible = 5;
         let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
         let end = Math.min(totalPages, start + maxVisible - 1);
-        
+
         if (end - start + 1 < maxVisible) {
             start = Math.max(1, end - maxVisible + 1);
         }
-        
+
         for (let i = start; i <= end; i++) {
             pages.push(i);
         }
         return pages;
     };
 
-    const filteredMovies = movies.filter(m =>
-        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.origin_name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredMovies = movies.filter(m => {
+        const query = removeVietnameseAccents(searchQuery.toLowerCase());
+        const name = removeVietnameseAccents(m.name.toLowerCase());
+        const originName = removeVietnameseAccents(m.origin_name?.toLowerCase() || '');
+        return name.includes(query) || originName.includes(query);
+    });
+
+    // TK05: Validation cho tìm kiếm rỗng
+    const handleSearchChange = (e) => {
+        const value = e.target.value;
+        setSearchQuery(value);
+        if (value.trim() === '' && searchError) {
+            setSearchError('');
+        }
+    };
+
+    const handleSearchSubmit = () => {
+        if (searchQuery.trim() === '') {
+            setSearchError('Vui lòng nhập từ khóa tìm kiếm');
+            return false;
+        }
+        setSearchError('');
+        return true;
+    };
 
     const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
@@ -145,8 +175,10 @@ function MoviesContent() {
                             type="text"
                             placeholder="Tìm kiếm phim..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={handleSearchChange}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
                         />
+                        {searchError && <span className={styles.searchError}>{searchError}</span>}
                     </div>
 
                     <div className={styles.filterRow}>
@@ -242,24 +274,24 @@ function MoviesContent() {
                             {filteredMovies.map(movie => <MovieCard key={movie._id} movie={movie} />)}
                         </div>
                         {filteredMovies.length === 0 && <p className={styles.empty}>Không tìm thấy phim nào</p>}
-                        
+
                         {totalPages > 1 && !searchQuery && (
                             <div className={styles.pagination}>
-                                <button 
-                                    onClick={() => handlePageChange(currentPage - 1)} 
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
                                     className={styles.pageBtn}
                                 >
                                     ← Trước
                                 </button>
-                                
+
                                 {currentPage > 3 && (
                                     <>
                                         <button onClick={() => handlePageChange(1)} className={styles.pageNum}>1</button>
                                         {currentPage > 4 && <span className={styles.dots}>...</span>}
                                     </>
                                 )}
-                                
+
                                 {getPageNumbers().map(page => (
                                     <button
                                         key={page}
@@ -269,16 +301,16 @@ function MoviesContent() {
                                         {page}
                                     </button>
                                 ))}
-                                
+
                                 {currentPage < totalPages - 2 && (
                                     <>
                                         {currentPage < totalPages - 3 && <span className={styles.dots}>...</span>}
                                         <button onClick={() => handlePageChange(totalPages)} className={styles.pageNum}>{totalPages}</button>
                                     </>
                                 )}
-                                
-                                <button 
-                                    onClick={() => handlePageChange(currentPage + 1)} 
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === totalPages}
                                     className={styles.pageBtn}
                                 >

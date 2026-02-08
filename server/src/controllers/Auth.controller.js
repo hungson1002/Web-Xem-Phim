@@ -16,7 +16,7 @@ export const Register = async (req, res, next) => {
         if (exitAuth) {
             return res.status(400).json({
                 success: false,
-                message: "Email already exists"
+                message: "Email đã tồn tại"
             })
         }
 
@@ -24,7 +24,7 @@ export const Register = async (req, res, next) => {
         if (password.length < 6) {
             return res.status(400).json({
                 success: false,
-                message: "Password must be at least 6 characters"
+                message: "Mật khẩu phải có ít nhất 6 ký tự"
             })
         }
 
@@ -69,9 +69,9 @@ export const Login = async (req, res, next) => {
 
         const auth = await Auth.findOne({ email });
         if (!auth) {
-            return res.status(401).json({
+            return res.status(400).json({
                 success: false,
-                message: "Invalid email or password"
+                message: "Email không tồn tại"
             })
         }
 
@@ -80,7 +80,7 @@ export const Login = async (req, res, next) => {
         if (!isMatch) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid email or password"
+                message: "Email hoặc mật khẩu không đúng"
             })
         }
 
@@ -88,7 +88,7 @@ export const Login = async (req, res, next) => {
         if (!auth.isVerified) {
             return res.status(400).json({
                 success: false,
-                message: "Please verify your email"
+                message: "Vui lòng xác thực email của bạn"
             })
         }
 

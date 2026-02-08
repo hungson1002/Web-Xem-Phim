@@ -16,7 +16,7 @@ export default function RootLayout({ children }) {
             <body>
                 <AuthProvider>
                     <Toaster
-                        position="top-right"
+                        position="top-center"
                         toastOptions={{
                             duration: 3000,
                             style: {
@@ -24,6 +24,7 @@ export default function RootLayout({ children }) {
                                 color: '#fff',
                                 border: '1px solid #2a2a3e',
                                 borderRadius: '8px',
+                                cursor: 'pointer',
                             },
                             success: {
                                 iconTheme: {

@@ -10,13 +10,20 @@ import styles from './auth.module.css';
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login } = useAuth();
+    const { login, isAuthenticated } = useAuth();
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [googleReady, setGoogleReady] = useState(false);
+
+    // Redirect nếu đã đăng nhập
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push('/');
+        }
+    }, [isAuthenticated, router]);
 
     // Tải script Google Identity
     useEffect(() => {
@@ -42,10 +49,46 @@ export default function LoginPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        const emailTrimmed = formData.email.trim();
+        const password = formData.password;
+
+        if (!emailTrimmed && !password) {
+            setError('Tài khoản và mật khẩu không thể bỏ trống');
+            return;
+        }
+
+        if (!emailTrimmed) {
+            setError('Vui lòng điền email của bạn');
+            return;
+        }
+
+        if (!password) {
+            setError('Mật khẩu không thể bỏ trống');
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailTrimmed)) {
+            setError('Email không đúng định dạng!');
+            return;
+        }
+
+        if (password.length > 32) {
+            setError('Mật khẩu không hợp lệ, vui lòng nhập lại!');
+            return;
+        }
+
+        const passwordRegex = /^[a-zA-Z0-9]+$/;
+        if (!passwordRegex.test(password)) {
+            setError('Mật khẩu không hợp lệ, vui lòng nhập lại!');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const res = await loginApi(formData);
+            const res = await loginApi({ email: emailTrimmed, password });
             login(res.auth, res.token);
             toast.success('Đăng nhập thành công!');
             router.push('/');
@@ -139,12 +182,11 @@ export default function LoginPage() {
                     <div className={styles.formGroup}>
                         <label>Email</label>
                         <input
-                            type="email"
+                            type="text"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
                             placeholder="Nhập email của bạn"
-                            required
                         />
                     </div>
 
@@ -157,7 +199,6 @@ export default function LoginPage() {
                                 value={formData.password}
                                 onChange={handleChange}
                                 placeholder="Nhập mật khẩu"
-                                required
                             />
                             <button
                                 type="button"

@@ -1,6 +1,5 @@
 'use client';
 
-import api from '@/lib/api';
 import Cookies from 'js-cookie';
 import { createContext, useContext, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -21,7 +20,6 @@ export function AuthProvider({ children }) {
                 const parsedUser = JSON.parse(storedUser);
                 setToken(storedToken);
                 setUser(parsedUser);
-                api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
             } catch (error) {
                 console.error('Failed to parse user data:', error);
                 Cookies.remove('token');
@@ -36,7 +34,6 @@ export function AuthProvider({ children }) {
         setToken(authToken);
         Cookies.set('token', authToken, { expires: 7 });
         localStorage.setItem('user', JSON.stringify(userData));
-        api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
     };
 
     const logout = () => {
@@ -44,7 +41,6 @@ export function AuthProvider({ children }) {
         setToken(null);
         Cookies.remove('token');
         localStorage.removeItem('user');
-        delete api.defaults.headers.common['Authorization'];
         toast.success('Đăng xuất thành công!');
     };
 

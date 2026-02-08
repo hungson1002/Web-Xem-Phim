@@ -1,7 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/movies/[slug]/page": "app/movies/[slug]/page.js",
-  "/login/page": "app/login/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/bookmarks/page": "app/bookmarks/page.js"
-}
