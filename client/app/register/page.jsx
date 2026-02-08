@@ -13,6 +13,7 @@ export default function RegisterPage() {
     const { login } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
+        username: '',
         email: '',
         password: '',
         confirmPassword: ''
@@ -51,6 +52,7 @@ export default function RegisterPage() {
         setError('');
 
         const nameTrimmed = formData.name.trim();
+        const usernameTrimmed = formData.username.trim();
         const emailTrimmed = formData.email.trim();
         const password = formData.password;
         const confirmPassword = formData.confirmPassword;
@@ -58,6 +60,19 @@ export default function RegisterPage() {
         // DK02: Kiểm tra họ tên trống
         if (!nameTrimmed) {
             setError('Vui lòng nhập họ và tên');
+            return;
+        }
+
+        // DK09: Kiểm tra username trống
+        if (!usernameTrimmed) {
+            setError('Vui lòng nhập tên đăng nhập');
+            return;
+        }
+
+        // Validate username regex
+        const usernameRegex = /^[a-zA-Z0-9_]{3,}$/;
+        if (!usernameRegex.test(usernameTrimmed)) {
+            setError('Tên đăng nhập tối thiểu 3 ký tự, không dấu, không khoảng trắng');
             return;
         }
 
@@ -97,6 +112,7 @@ export default function RegisterPage() {
         try {
             await registerApi({
                 name: nameTrimmed,
+                username: usernameTrimmed,
                 email: emailTrimmed,
                 password: password
             });
@@ -189,6 +205,17 @@ export default function RegisterPage() {
                             value={formData.name}
                             onChange={handleChange}
                             placeholder="Nhập tên của bạn"
+                        />
+                    </div>
+
+                    <div className={styles.formGroup}>
+                        <label>Tên đăng nhập (Username)</label>
+                        <input
+                            type="text"
+                            name="username"
+                            value={formData.username}
+                            onChange={handleChange}
+                            placeholder="Nhập tên đăng nhập (ví dụ: ngoc_truc)"
                         />
                     </div>
 

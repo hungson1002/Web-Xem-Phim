@@ -59,7 +59,7 @@ export default function LoginPage() {
         }
 
         if (!emailTrimmed) {
-            setError('Vui lòng điền email của bạn');
+            setError('Vui lòng điền email hoặc tên đăng nhập của bạn');
             return;
         }
 
@@ -69,8 +69,10 @@ export default function LoginPage() {
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(emailTrimmed)) {
-            setError('Email không đúng định dạng!');
+        const usernameRegex = /^[a-zA-Z0-9_]{3,}$/;
+
+        if (!emailRegex.test(emailTrimmed) && !usernameRegex.test(emailTrimmed)) {
+            setError('Email hoặc Tên đăng nhập không đúng định dạng!');
             return;
         }
 
@@ -180,13 +182,13 @@ export default function LoginPage() {
 
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <div className={styles.formGroup}>
-                        <label>Email</label>
+                        <label>Email hoặc Tên đăng nhập</label>
                         <input
                             type="text"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            placeholder="Nhập email của bạn"
+                            placeholder="Nhập email hoặc username"
                         />
                     </div>
 

@@ -24,6 +24,18 @@ export default function MovieCard({ movie }) {
         }
     }, [isAuthenticated, movie._id]);
 
+    // Lắng nghe sự kiện thay đổi bookmark từ các component khác
+    useEffect(() => {
+        const handleBookmarkChange = (e) => {
+            if (e.detail && e.detail.movieId === movie._id) {
+                setBookmarked(e.detail.isBookmarked);
+            }
+        };
+
+        window.addEventListener('bookmark_change', handleBookmarkChange);
+        return () => window.removeEventListener('bookmark_change', handleBookmarkChange);
+    }, [movie._id]);
+
     const handleBookmark = async (e) => {
         e.preventDefault(); // Ngăn Link navigate
         e.stopPropagation();
@@ -40,6 +52,9 @@ export default function MovieCard({ movie }) {
             if (bookmarked) {
                 await removeBookmark(movie._id);
                 setBookmarked(false);
+                window.dispatchEvent(new CustomEvent('bookmark_change', {
+                    detail: { movieId: movie._id, isBookmarked: false }
+                }));
                 toast.success('Đã xóa khỏi danh sách yêu thích');
             } else {
                 const bookmarkData = {
@@ -52,6 +67,9 @@ export default function MovieCard({ movie }) {
                 };
                 await addBookmark(bookmarkData);
                 setBookmarked(true);
+                window.dispatchEvent(new CustomEvent('bookmark_change', {
+                    detail: { movieId: movie._id, isBookmarked: true }
+                }));
                 toast.success('Đã thêm vào danh sách yêu thích');
             }
         } catch (err) {

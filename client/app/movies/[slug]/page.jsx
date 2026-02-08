@@ -26,6 +26,29 @@ export default function MovieDetailPage() {
     const [editContent, setEditContent] = useState('');
     const [activeMenu, setActiveMenu] = useState(null);
     const [deleteModal, setDeleteModal] = useState({ show: false, commentId: null });
+    const [rating, setRating] = useState(0);
+    const [editRating, setEditRating] = useState(0);
+
+    const StarRating = ({ value, onChange, readonly = false, size = 20 }) => {
+        return (
+            <div className={styles.starRating} style={{ gap: 4, display: 'flex' }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                        key={star}
+                        onClick={() => !readonly && onChange && onChange(star)}
+                        style={{
+                            cursor: readonly ? 'default' : 'pointer',
+                            color: star <= value ? '#e81a4b' : '#4a5568',
+                            fontSize: size,
+                            transition: 'color 0.2s'
+                        }}
+                    >
+                        ★
+                    </span>
+                ))}
+            </div>
+        );
+    };
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -66,11 +89,11 @@ export default function MovieDetailPage() {
         const handleClickOutside = () => {
             if (activeMenu) setActiveMenu(null);
         };
-        
+
         if (activeMenu) {
             document.addEventListener('click', handleClickOutside);
         }
-        
+
         return () => {
             document.removeEventListener('click', handleClickOutside);
         };
@@ -106,29 +129,56 @@ export default function MovieDetailPage() {
 
     const handleComment = async (e) => {
         e.preventDefault();
-        if (!newComment.trim() || !isAuthenticated) return;
+        if (!isAuthenticated) {
+            toast.error('Vui lòng đăng nhập để đánh giá phim!'); // DG02
+            return;
+        }
+
+        // DG03: Kiểm tra rating
+        if (rating === 0) {
+            toast.error('Vui lòng chọn số sao!');
+            return;
+        }
+
+        // DG04: Kiểm tra nội dung rỗng
+        if (!newComment.trim()) {
+            toast.error('Vui lòng nhập nội dung!');
+            return;
+        }
+
+        // DG05: Kiểm tra độ dài nội dung
+        if (newComment.length > 500) {
+            toast.error('Nội dung không được quá 500 ký tự!');
+            return;
+        }
+
         try {
-            const res = await addComment({ movieId: movie._id, content: newComment });
+            const res = await addComment({ movieId: movie._id, content: newComment, rating });
             setComments([res.data || res, ...comments]);
             setNewComment('');
-            toast.success('Đã đăng bình luận!');
+            setRating(0);
+            toast.success('Đã gửi đánh giá thành công!'); // DG01
         } catch (e) {
-            toast.error('Không thể đăng bình luận. Vui lòng thử lại!');
+            toast.error(e.response?.data?.message || 'Không thể đăng đánh giá. Vui lòng thử lại!');
             console.error(e);
         }
     };
 
     const handleEditComment = async (commentId) => {
-        if (!editContent.trim()) return;
+        if (!editContent.trim()) {
+            toast.error('Nội dung không được để trống');
+            return;
+        }
         try {
-            const res = await updateComment(movie._id, commentId, { content: editContent });
+            const res = await updateComment(movie._id, commentId, { content: editContent, rating: editRating });
             setComments(comments.map(c => c._id === commentId ? (res.data || res) : c));
             setEditingCommentId(null);
             setEditContent('');
+            setEditRating(0);
             setActiveMenu(null);
-            toast.success('Đã cập nhật bình luận!');
+            toast.success('Đã cập nhật đánh giá!');
         } catch (e) {
-            toast.error('Không thể cập nhật bình luận!');
+            toast.error('Không thể cập nhật đánh giá!');
             console.error(e);
         }
     };
@@ -149,12 +199,15 @@ export default function MovieDetailPage() {
     const startEdit = (comment) => {
         setEditingCommentId(comment._id);
         setEditContent(comment.content);
+        setEditRating(comment.rating || 0);
         setActiveMenu(null);
     };
 
     const cancelEdit = () => {
         setEditingCommentId(null);
         setEditContent('');
+        setEditRating(0);
+        setActiveMenu(null);
     };
 
     if (loading) return <LoadingSpinner fullPage />;
@@ -224,10 +277,39 @@ export default function MovieDetailPage() {
 
                     {tab === 'comments' && (
                         <div className={styles.commentsTab}>
-                            {isAuthenticated && !comments.some(c => (c.userId?._id || c.userId?.id) === (user?.id || user?._id)) && (
+                            {/* Hiển thị form nếu chưa đăng nhập HOẶC (đã đăng nhập VÀ chưa đánh giá) */}
+                            {(!isAuthenticated || !comments.some(c => (c.userId?._id || c.userId?.id) === (user?.id || user?._id))) && (
                                 <form onSubmit={handleComment} className={styles.commentForm}>
-                                    <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Viết bình luận..." rows={3} />
-                                    <button type="submit">Gửi</button>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
+                                        <div>
+                                            <div style={{ marginBottom: 4, fontSize: '0.9rem', color: '#a0aec0' }}>Chọn số sao của bạn:</div>
+                                            <StarRating value={rating} onChange={setRating} size={24} />
+                                        </div>
+                                        {newComment.length > 500 && (
+                                            <span style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 500 }}>
+                                                Nội dung không được quá 500 ký tự!
+                                            </span>
+                                        )}
+                                    </div>
+                                    <textarea
+                                        value={newComment}
+                                        onChange={(e) => setNewComment(e.target.value)}
+                                        placeholder="Viết đánh giá của bạn..."
+                                        rows={3}
+                                        style={newComment.length > 500 ? { borderColor: '#ef4444' } : {}}
+                                    />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                                        <span style={{ fontSize: '0.8rem', color: newComment.length > 500 ? '#ef4444' : '#718096' }}>
+                                            {newComment.length}/500
+                                        </span>
+                                        <button
+                                            type="submit"
+                                            disabled={newComment.length > 500}
+                                            style={newComment.length > 500 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                                        >
+                                            Gửi đánh giá
+                                        </button>
+                                    </div>
                                 </form>
                             )}
                             {comments.length === 0 ? <p className={styles.noComments}>Chưa có bình luận</p> : (
@@ -245,9 +327,9 @@ export default function MovieDetailPage() {
                                                 <strong>{c.userId?.name || 'Ẩn danh'}</strong>
                                                 {c.createdAt && (
                                                     <span className={styles.commentTime}>
-                                                        {new Date(c.createdAt).toLocaleDateString('vi-VN', { 
-                                                            year: 'numeric', 
-                                                            month: 'short', 
+                                                        {new Date(c.createdAt).toLocaleDateString('vi-VN', {
+                                                            year: 'numeric',
+                                                            month: 'short',
                                                             day: 'numeric',
                                                             hour: '2-digit',
                                                             minute: '2-digit'
@@ -255,11 +337,11 @@ export default function MovieDetailPage() {
                                                     </span>
                                                 )}
                                             </div>
-                                            
+
                                             {/* Menu 3 chấm - chỉ hiện với comment của user */}
                                             {((user?.id || user?._id) === (c.userId?._id || c.userId?.id)) && (
                                                 <div className={styles.commentMenu}>
-                                                    <button 
+                                                    <button
                                                         className={styles.menuBtn}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -289,23 +371,52 @@ export default function MovieDetailPage() {
                                                 </div>
                                             )}
                                         </div>
-                                        
+
+                                        {/* Edit mode hoặc hiển thị content */}
                                         {/* Edit mode hoặc hiển thị content */}
                                         {editingCommentId === c._id ? (
                                             <div className={styles.editForm}>
-                                                <textarea 
-                                                    value={editContent} 
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                                    <StarRating value={editRating} onChange={setEditRating} size={18} />
+                                                    {editContent.length > 500 && (
+                                                        <span style={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: 500 }}>
+                                                            Quá 500 ký tự!
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <textarea
+                                                    value={editContent}
                                                     onChange={(e) => setEditContent(e.target.value)}
                                                     rows={3}
                                                     className={styles.editTextarea}
+                                                    style={editContent.length > 500 ? { borderColor: '#ef4444' } : {}}
                                                 />
+                                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4, marginBottom: 8 }}>
+                                                    <span style={{ fontSize: '0.8rem', color: editContent.length > 500 ? '#ef4444' : '#718096' }}>
+                                                        {editContent.length}/500
+                                                    </span>
+                                                </div>
                                                 <div className={styles.editActions}>
-                                                    <button onClick={() => handleEditComment(c._id)} className={styles.saveBtn}>Lưu</button>
                                                     <button onClick={cancelEdit} className={styles.cancelBtn}>Hủy</button>
+                                                    <button
+                                                        onClick={() => handleEditComment(c._id)}
+                                                        className={styles.saveBtn}
+                                                        disabled={editContent.length > 500}
+                                                        style={editContent.length > 500 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                                                    >
+                                                        Lưu
+                                                    </button>
                                                 </div>
                                             </div>
                                         ) : (
-                                            <p className={styles.commentContent}>{c.content}</p>
+                                            <div className={styles.commentContent}>
+                                                {c.rating && (
+                                                    <div style={{ marginBottom: 4 }}>
+                                                        <StarRating value={c.rating} readonly size={14} />
+                                                    </div>
+                                                )}
+                                                <p>{c.content}</p>
+                                            </div>
                                         )}
                                     </div>
                                 ))

@@ -10,13 +10,22 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Đăng ký
 export const Register = async (req, res, next) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, username } = req.body;
 
-        const exitAuth = await Auth.findOne({ email });
+        const exitAuth = await Auth.findOne({ $or: [{ email }, { username }] });
         if (exitAuth) {
             return res.status(400).json({
                 success: false,
-                message: "Email đã tồn tại"
+                message: exitAuth.email === email ? "Email đã tồn tại" : "Tên đăng nhập đã tồn tại"
+            })
+        }
+
+        // Validate username (ít nhất 3 ký tự, không dấu, không khoảng trắng)
+        const usernameRegex = /^[a-zA-Z0-9_]{3,}$/;
+        if (!usernameRegex.test(username)) {
+            return res.status(400).json({
+                success: false,
+                message: "Tên đăng nhập phải có ít nhất 3 ký tự, không dấu và không khoảng trắng"
             })
         }
 
@@ -42,6 +51,7 @@ export const Register = async (req, res, next) => {
         await Auth.create({
             name,
             email,
+            username,
             password: hashPassword,
             otp,
             otpExpires,
@@ -65,13 +75,16 @@ export const Register = async (req, res, next) => {
 // Đăng nhập
 export const Login = async (req, res, next) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body; // email ở đây có thể là email hoặc username
 
-        const auth = await Auth.findOne({ email });
+        const auth = await Auth.findOne({
+            $or: [{ email: email }, { username: email }]
+        });
+
         if (!auth) {
             return res.status(400).json({
                 success: false,
-                message: "Email không tồn tại"
+                message: "Tài khoản không tồn tại"
             })
         }
 
@@ -110,6 +123,7 @@ export const Login = async (req, res, next) => {
             auth: {
                 id: auth._id,
                 name: auth.name,
+                username: auth.username,
                 email: auth.email,
                 avatar: auth.avatar || null,
                 provider: auth.provider || "local",
@@ -195,6 +209,7 @@ export const GoogleLogin = async (req, res, next) => {
             auth = await Auth.create({
                 name,
                 email,
+                username: email.split('@')[0] + Math.floor(Math.random() * 10000), // Auto-generate unique username
                 googleId,
                 avatar: payload.picture,
                 provider: 'google',

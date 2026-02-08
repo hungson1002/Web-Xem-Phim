@@ -33,26 +33,43 @@ export const getCommentsByMovie = async (req, res) => {
 export const addComment = async (req, res) => {
   console.log("=== Add Comment Request (Embed Mode) ===");
   try {
-    const { movieId, content } = req.body;
+    const { movieId, content, rating } = req.body;
 
     // Lấy userId (giữ nguyên logic của bạn)
     const userId = req.authId || req.userId;
 
-    if (!content) {
+    // DG04: Kiểm tra nội dung rỗng
+    if (!content || !content.trim()) {
       return res.status(400).json({ success: false, message: 'Nội dung không được để trống' });
     }
+
+    // DG03: Kiểm tra rating
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn số sao (1-5)' });
+    }
+
     if (!userId) {
-       return res.status(401).json({ success: false, message: 'Không tìm thấy User ID' });
+      return res.status(401).json({ success: false, message: 'Không tìm thấy User ID' });
     }
 
     // Tạo object bình luận con
     const newCommentItem = {
       userId: userId,
       content: content,
+      rating: rating,
       createdAt: new Date()
     };
 
-    // LOGIC MỚI:
+    //Kiểm tra xem user này đã bình luận phim này chưa
+    const existingReview = await Comment.findOne({
+      movieId: movieId,
+      "comments.userId": userId
+    });
+
+    if (existingReview) {
+      return res.status(400).json({ success: false, message: 'Bạn đã đánh giá phim này rồi!' });
+    }
+
     // Tìm phim theo movieId.
     // - Nếu thấy: $push (đẩy) comment mới vào mảng comments.
     // - Nếu chưa thấy: Tự tạo document mới cho phim này (nhờ upsert: true).
@@ -86,7 +103,6 @@ export const deleteComment = async (req, res) => {
     const userId = req.authId || req.userId; // Lấy ID người đang request
 
     // Tìm phim và dùng $pull để rút comment ra khỏi mảng
-    // Điều kiện: Phải đúng movieId, đúng commentId VÀ đúng userId (chính chủ)
     const updatedMovie = await Comment.findOneAndUpdate(
       { movieId: movieId },
       {
@@ -113,10 +129,23 @@ export const deleteComment = async (req, res) => {
 export const updateComment = async (req, res) => {
   try {
     const { movieId, commentId } = req.params;
-    const { content } = req.body;
+    const { content, rating } = req.body;
     const userId = req.authId || req.userId;
 
-    if (!content) return res.status(400).json({ success: false, message: 'Nội dung trống' });
+    // DG04 & DG03 Validation update
+    if (!content || !content.trim()) return res.status(400).json({ success: false, message: 'Nội dung trống' });
+    if (rating && (rating < 1 || rating > 5)) return res.status(400).json({ success: false, message: 'Số sao không hợp lệ' });
+
+    // Build update object
+    const updateFields = {
+      "comments.$.content": content,
+      "comments.$.updatedAt": new Date()
+    };
+
+    // DG09: Cập nhật rating nếu có
+    if (rating) {
+      updateFields["comments.$.rating"] = rating;
+    }
 
     // Dùng kỹ thuật "Positional Operator ($)" để update đúng phần tử trong mảng
     const updatedMovie = await Comment.findOneAndUpdate(
@@ -126,13 +155,10 @@ export const updateComment = async (req, res) => {
         "comments.userId": userId // Chỉ chủ nhân mới tìm thấy để sửa
       },
       {
-        $set: {
-          "comments.$.content": content, // Dấu $ đại diện cho vị trí tìm thấy
-          "comments.$.updatedAt": new Date()
-        }
+        $set: updateFields
       },
       { new: true }
-    );
+    ).populate('comments.userId', 'name avatar');;
 
     if (!updatedMovie) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy hoặc không có quyền sửa' });

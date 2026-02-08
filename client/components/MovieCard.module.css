@@ -66,6 +66,9 @@
     left: 10px;
     display: flex;
     gap: 6px;
+    max-width: calc(100% - 60px); /* Trừ hao nút heart bên phải */
+    z-index: 5;
+    flex-wrap: wrap;
 }
 
 .heartBtn {
@@ -110,6 +113,8 @@
     border-radius: var(--radius-sm);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    flex-shrink: 0; /* Không bị co lại */
+    white-space: nowrap;
 }
 
 .lang {
@@ -120,6 +125,10 @@
     font-size: 0.7rem;
     font-weight: 600;
     border-radius: var(--radius-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .episode {

@@ -16,6 +16,8 @@ export default function BookmarksPage() {
 
     const [bookmarks, setBookmarks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
 
     useEffect(() => {
         if (!authLoading && !isAuthenticated) { router.push('/login'); return; }
@@ -33,6 +35,11 @@ export default function BookmarksPage() {
                 .finally(() => setLoading(false));
         }
     }, [isAuthenticated, authLoading, router]);
+
+    // Scroll to top khi đổi trang
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [currentPage]);
 
     const handleRemove = async (movieId) => {
         try {
@@ -52,6 +59,17 @@ export default function BookmarksPage() {
     if (!isAuthenticated) return null;
 
     const bookmarksList = Array.isArray(bookmarks) ? bookmarks : [];
+    const totalPages = Math.ceil(bookmarksList.length / itemsPerPage);
+    const currentBookmarks = bookmarksList.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    const handlePageChange = (page) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
 
     return (
         <div className={styles.page}>
@@ -67,14 +85,44 @@ export default function BookmarksPage() {
                     <>
                         <p className={styles.count}>Bạn đã lưu <strong>{bookmarksList.length}</strong> phim</p>
                         <div className={styles.grid}>
-                            {bookmarksList.map((bookmark) => (
-                                <BookmarkCard 
-                                    key={bookmark.movieId} 
-                                    bookmark={bookmark} 
+                            {currentBookmarks.map((bookmark) => (
+                                <BookmarkCard
+                                    key={bookmark.movieId}
+                                    bookmark={bookmark}
                                     onRemove={handleRemove}
                                 />
                             ))}
                         </div>
+
+                        {totalPages > 1 && (
+                            <div className={styles.pagination}>
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className={styles.pageBtn}
+                                >
+                                    Trước
+                                </button>
+
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => handlePageChange(page)}
+                                        className={`${styles.pageBtn} ${currentPage === page ? styles.activePage : ''}`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className={styles.pageBtn}
+                                >
+                                    Sau
+                                </button>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
