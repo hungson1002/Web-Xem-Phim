@@ -49,7 +49,7 @@ export const getAllUser = async (req, res, next) => {
 // Cập nhật thông tin user
 export const updateUser = async (req, res, next) => {
     try {
-        const { name, avatar, currentPassword, newPassword } = req.body
+        const { name, currentPassword, newPassword } = req.body
 
         const user = await Auth.findById(req.params.id)
 
@@ -60,8 +60,10 @@ export const updateUser = async (req, res, next) => {
             })
         }
 
+        const avatarUrl = req.file ? req.file.path : req.body.avatar;
+
         if (name) user.name = name
-        if (avatar) user.avatar = avatar
+        if (avatarUrl) user.avatar = avatarUrl
         
         // Đổi mật khẩu - cần verify password cũ
         if (newPassword && currentPassword) {

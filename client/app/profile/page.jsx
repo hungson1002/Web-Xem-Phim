@@ -15,6 +15,7 @@ export default function ProfilePage() {
     const [formData, setFormData] = useState({ username: '', email: '', currentPassword: '', newPassword: '' });
     const [loading, setLoading] = useState(false);
     const [avatarPreview, setAvatarPreview] = useState(null);
+    const [avatarFile, setAvatarFile] = useState(null);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -35,6 +36,7 @@ export default function ProfilePage() {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setAvatarPreview(reader.result);
+                setAvatarFile(file);
             };
             reader.readAsDataURL(file);
         }
@@ -56,15 +58,25 @@ export default function ProfilePage() {
             const hasAvatarChange = avatarPreview && avatarPreview !== user?.avatar;
             const hasPasswordChange = formData.newPassword && formData.currentPassword;
             
-            if (hasAvatarChange) {
-                data.avatar = avatarPreview;
-            }
-            if (hasPasswordChange) {
-                data.currentPassword = formData.currentPassword;
-                data.newPassword = formData.newPassword;
+            let submitData;
+            if (avatarFile) {
+                submitData = new FormData();
+                submitData.append('name', formData.username);
+                submitData.append('avatar', avatarFile);
+                if (hasPasswordChange) {
+                    submitData.append('currentPassword', formData.currentPassword);
+                    submitData.append('newPassword', formData.newPassword);
+                }
+            } else {
+                submitData = { name: formData.username };
+                if (hasAvatarChange) submitData.avatar = avatarPreview;
+                if (hasPasswordChange) {
+                    submitData.currentPassword = formData.currentPassword;
+                    submitData.newPassword = formData.newPassword;
+                }
             }
             
-            const res = await updateUser(userId, data);
+            const res = await updateUser(userId, submitData);
             updateAuthUser(res.user || res);
             
             // Thông báo cụ thể dựa vào những gì đã cập nhật

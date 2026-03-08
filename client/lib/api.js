@@ -53,11 +53,16 @@ const api = {
     },
 
     put: async (url, body) => {
+        const isFormData = body instanceof FormData;
+        const headers = getHeaders();
+        if (isFormData) {
+            delete headers['Content-Type'];
+        }
         const response = await fetch(`${BASE_URL}${url}`, {
             method: 'PUT',
-            headers: getHeaders(),
+            headers,
             credentials: 'include',
-            body: JSON.stringify(body),
+            body: isFormData ? body : JSON.stringify(body),
         });
         return handleResponse(response);
     },
