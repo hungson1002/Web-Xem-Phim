@@ -51,6 +51,7 @@ export default function Navbar() {
                     <Link href="/movies" className={styles.navLink}>Phim</Link>
                     <Link href="/movies?type=series" className={styles.navLink}>Phim bộ</Link>
                     <Link href="/movies?type=single" className={styles.navLink}>Phim lẻ</Link>
+                    <Link href="/watch-party" className={styles.navLink}>Watch Party</Link>
                 </div>
 
                 <div className={styles.navRight}>
