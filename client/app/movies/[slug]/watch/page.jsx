@@ -2,6 +2,8 @@
 
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { getMovieBySlug } from '@/lib/movies';
+import { saveWatchHistory } from '@/lib/watchHistory';
+import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
@@ -15,6 +17,7 @@ function WatchContent() {
     const [movie, setMovie] = useState(null);
     const [currentEp, setCurrentEp] = useState(null);
     const [loading, setLoading] = useState(true);
+    const { isAuthenticated, loading: authLoading } = useAuth();
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -30,6 +33,12 @@ function WatchContent() {
         };
         if (slug) load();
     }, [slug, epSlug]);
+
+    useEffect(() => {
+        if (!authLoading && isAuthenticated && movie?.slug) {
+            saveWatchHistory(movie.slug, currentEp).catch(() => {});
+        }
+    }, [movie, currentEp, isAuthenticated, authLoading]);
 
     if (loading) return <LoadingSpinner fullPage />;
     if (!movie) return <div className={styles.notFound}><h1>Không tìm thấy</h1><Link href="/movies">← Quay lại</Link></div>;

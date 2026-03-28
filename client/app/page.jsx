@@ -4,6 +4,8 @@ import HeroBanner from '@/components/HeroBanner';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import MovieSlider from '@/components/MovieSlider';
 import { getAllMovies } from '@/lib/movies';
+import { getWatchHistory } from '@/lib/watchHistory';
+import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
 import styles from './page.module.css';
 
@@ -12,7 +14,9 @@ export default function HomePage() {
     const [recentMovies, setRecentMovies] = useState([]);
     const [seriesMovies, setSeriesMovies] = useState([]);
     const [singleMovies, setSingleMovies] = useState([]);
+    const [watchHistory, setWatchHistory] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { isAuthenticated, loading: authLoading } = useAuth();
 
     useEffect(() => {
         const fetchMovies = async () => {
@@ -40,6 +44,30 @@ export default function HomePage() {
         fetchMovies();
     }, []);
 
+    useEffect(() => {
+        const loadHistory = async () => {
+            if (authLoading || !isAuthenticated) {
+                setWatchHistory([]);
+                return;
+            }
+            try {
+                const res = await getWatchHistory(12);
+                const list = res.data || res || [];
+                const movies = list
+                    .map((item) => item.movie)
+                    .filter(Boolean);
+                setWatchHistory(movies);
+            } catch (error) {
+                console.error('Error loading watch history:', error);
+            }
+        };
+
+        loadHistory();
+        const handleChange = () => loadHistory();
+        window.addEventListener('watch_history_change', handleChange);
+        return () => window.removeEventListener('watch_history_change', handleChange);
+    }, [isAuthenticated, authLoading]);
+
     if (loading) {
         return <LoadingSpinner fullPage />;
     }
@@ -49,11 +77,12 @@ export default function HomePage() {
             <HeroBanner movies={featuredMovies} />
 
             <div className={styles.container}>
-                <MovieSlider
-                    title="Phim mới cập nhật"
-                    movies={recentMovies}
-                    viewAllLink="/movies"
-                />
+                {watchHistory.length > 0 && (
+                    <MovieSlider
+                        title="Đã xem gần đây"
+                        movies={watchHistory}
+                    />
+                )}
 
                 {seriesMovies.length > 0 && (
                     <MovieSlider
@@ -70,6 +99,12 @@ export default function HomePage() {
                         viewAllLink="/movies?type=single"
                     />
                 )}
+
+                <MovieSlider
+                    title="Phim mới cập nhật"
+                    movies={recentMovies}
+                    viewAllLink="/movies"
+                />
             </div>
         </div>
     );

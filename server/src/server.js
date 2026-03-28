@@ -12,6 +12,7 @@ import CountryRoute from './routes/Country.routes.js';
 import MovieRoute from './routes/Movie.routes.js';
 import SavedMovieRoute from './routes/SavedMovie.route.js';
 import UserRoute from './routes/User.route.js';
+import WatchHistoryRoute from './routes/WatchHistory.route.js';
 import WatchRoomRoute from './routes/WatchRoom.route.js';
 import { initializeSocket } from './services/socketService.js';
 dotenv.config();
@@ -63,6 +64,7 @@ app.use('/api/countries', CountryRoute);
 app.use('/api/movies', MovieRoute);
 app.use('/api/bookmarks', BookmarkRoute);
 app.use('/api/saved-movies', SavedMovieRoute);
+app.use('/api/watch-history', WatchHistoryRoute);
 app.use('/api/watch-rooms', WatchRoomRoute);
 
 import https from 'https';
