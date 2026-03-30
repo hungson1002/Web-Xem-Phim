@@ -1,3 +1,4 @@
+import ChatMessage from '../models/ChatMessage.model.js';
 import WatchRoom from '../models/WatchRoom.model.js';
 
 // Store active socket connections per room
@@ -5,6 +6,22 @@ const roomSockets = new Map(); // roomCode -> Set of socket ids
 const socketRooms = new Map(); // socketId -> roomCode
 const MAX_CHAT_LENGTH = 500;
 const MAX_CHAT_HISTORY = 200;
+
+const trimRoomMessages = async (roomId) => {
+    const extraMessages = await ChatMessage.find({ room: roomId })
+        .sort({ sentAt: -1 })
+        .skip(MAX_CHAT_HISTORY)
+        .select('_id')
+        .lean();
+
+    if (!extraMessages.length) {
+        return;
+    }
+
+    await ChatMessage.deleteMany({
+        _id: { $in: extraMessages.map((message) => message._id) }
+    });
+};
 
 export const initializeSocket = (io) => {
     io.on('connection', (socket) => {
@@ -218,22 +235,22 @@ export const initializeSocket = (io) => {
                     sentAt: new Date()
                 };
 
-                const room = await WatchRoom.findOneAndUpdate(
-                    { roomCode: upperCode, isActive: true },
-                    {
-                        $push: {
-                            messages: {
-                                $each: [messagePayload],
-                                $slice: -MAX_CHAT_HISTORY
-                            }
-                        }
-                    },
-                    { new: true }
-                );
+                const room = await WatchRoom.findOne({
+                    roomCode: upperCode,
+                    isActive: true
+                }).select('_id roomCode');
 
                 if (!room) {
                     return;
                 }
+
+                await ChatMessage.create({
+                    room: room._id,
+                    roomCode: room.roomCode,
+                    ...messagePayload
+                });
+
+                await trimRoomMessages(room._id);
 
                 io.to(upperCode).emit('chat-message', messagePayload);
             } catch (error) {

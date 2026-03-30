@@ -20,30 +20,6 @@ const participantSchema = new mongoose.Schema({
     }
 });
 
-const chatMessageSchema = new mongoose.Schema({
-    senderId: {
-        type: String,
-        required: true
-    },
-    senderName: {
-        type: String,
-        required: true
-    },
-    senderAvatar: {
-        type: String,
-        default: null
-    },
-    text: {
-        type: String,
-        required: true,
-        maxlength: 500
-    },
-    sentAt: {
-        type: Date,
-        default: Date.now
-    }
-}, { _id: false });
-
 const watchRoomSchema = new mongoose.Schema({
     roomCode: {
         type: String,
@@ -74,10 +50,6 @@ const watchRoomSchema = new mongoose.Schema({
         required: true
     },
     participants: [participantSchema],
-    messages: {
-        type: [chatMessageSchema],
-        default: []
-    },
     maxParticipants: {
         type: Number,
         default: 30,

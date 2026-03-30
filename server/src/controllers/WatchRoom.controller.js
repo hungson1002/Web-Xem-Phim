@@ -1,5 +1,8 @@
 import Auth from '../models/Auth.model.js';
+import ChatMessage from '../models/ChatMessage.model.js';
 import WatchRoom from '../models/WatchRoom.model.js';
+
+const MAX_CHAT_HISTORY = 200;
 
 // Generate unique room code helper
 const generateRoomCode = async () => {
@@ -28,6 +31,22 @@ const getUserInfo = async (authId) => {
         email: user.email,
         avatar: user.avatar || null
     };
+};
+
+const getRecentMessages = async (roomId) => {
+    const messages = await ChatMessage.find({ room: roomId })
+        .sort({ sentAt: -1 })
+        .limit(MAX_CHAT_HISTORY)
+        .select('-_id senderId senderName senderAvatar text sentAt')
+        .lean();
+
+    return messages.reverse();
+};
+
+const buildRoomResponse = async (roomDoc) => {
+    const roomData = roomDoc.toObject();
+    roomData.messages = await getRecentMessages(roomDoc._id);
+    return roomData;
 };
 
 // Create a new watch room
@@ -123,9 +142,11 @@ export const getRoom = async (req, res) => {
             });
         }
 
+        const roomData = await buildRoomResponse(room);
+
         res.json({
             success: true,
-            data: room
+            data: roomData
         });
     } catch (error) {
         console.error('Get room error:', error);
@@ -169,10 +190,11 @@ export const joinRoom = async (req, res) => {
         );
 
         if (alreadyJoined) {
+            const roomData = await buildRoomResponse(room);
             return res.json({
                 success: true,
                 message: 'Already in room',
-                data: room
+                data: roomData
             });
         }
 
@@ -193,10 +215,12 @@ export const joinRoom = async (req, res) => {
 
         await room.save();
 
+        const roomData = await buildRoomResponse(room);
+
         res.json({
             success: true,
             message: 'Joined room successfully',
-            data: room
+            data: roomData
         });
     } catch (error) {
         console.error('Join room error:', error);

@@ -35,7 +35,9 @@ export default function WatchRoomPage() {
     const [isChatOpen, setIsChatOpen] = useState(true);
     const [showAllParticipants, setShowAllParticipants] = useState(false);
     const [chatPanelHeight, setChatPanelHeight] = useState(0);
-    const [isMobileView, setIsMobileView] = useState(false);
+    const [isMobileView, setIsMobileView] = useState(() => (
+        typeof window !== 'undefined' ? window.innerWidth <= 980 : false
+    ));
 
     // Auth guard
     useEffect(() => {
