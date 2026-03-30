@@ -25,6 +25,7 @@
 .searchBox {
     position: relative;
     margin-bottom: 32px;
+    z-index: 30;
 }
 
 .searchBox svg {
@@ -61,6 +62,106 @@
     margin-top: 4px;
     color: #ef4444;
     font-size: 0.85rem;
+}
+
+.historyDropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    z-index: 40;
+}
+
+.historyHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.historyClearAll {
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--accent-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.historyClearAll:hover {
+    text-decoration: underline;
+}
+
+.historyList {
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.historyItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.historyItem:last-child {
+    border-bottom: none;
+}
+
+.historyKeyword {
+    flex: 1;
+    padding: 12px 4px;
+    text-align: left;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.historyKeyword:hover {
+    color: var(--text-primary);
+}
+
+.historyDelete {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.historyDelete:hover {
+    background: var(--bg-hover);
+    color: #ef4444;
+}
+
+.historyEmpty {
+    padding: 14px 16px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0;
 }
 
 .filterRow {

@@ -1,0 +1,9 @@
+[memory-db] MongoDB started at mongodb://127.0.0.1:65185/
+(node:17508) [MONGOOSE] Warning: Duplicate schema index on {"roomCode":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17508) [MONGODB DRIVER] Warning: useNewUrlParser is a deprecated option: useNewUrlParser has no effect since Node.js Driver version 4.0.0 and will be removed in the next major version
+(node:17508) [MONGODB DRIVER] Warning: useUnifiedTopology is a deprecated option: useUnifiedTopology has no effect since Node.js Driver version 4.0.0 and will be removed in the next major version
+Server running on port 4000
+Socket.IO enabled
+Environment: development
+MongoDB connected successfully

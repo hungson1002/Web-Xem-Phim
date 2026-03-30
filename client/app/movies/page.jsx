@@ -3,8 +3,9 @@
 import LoadingSpinner from '@/components/LoadingSpinner';
 import MovieCard from '@/components/MovieCard';
 import { getAllCategories, getAllCountries, getAllMovies, getMoviesByCategory, getMoviesByCountry, getMoviesByYear } from '@/lib/movies';
+import { clearSearchHistory, deleteSearchHistoryItem, getSearchHistory, saveSearchHistory } from '@/lib/searchHistory';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import styles from './movies.module.css';
 
 function MoviesContent() {
@@ -20,6 +21,10 @@ function MoviesContent() {
     const [totalMovies, setTotalMovies] = useState(0);
     const [sortBy, setSortBy] = useState('');
     const [searchError, setSearchError] = useState('');
+    const [searchHistory, setSearchHistory] = useState([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [showSearchHistory, setShowSearchHistory] = useState(false);
+    const searchBoxRef = useRef(null);
 
     // Hàm xóa dấu tiếng Việt để tìm kiếm không dấu (TK03)
     const removeVietnameseAccents = (str) => {
@@ -78,6 +83,17 @@ function MoviesContent() {
         }
     }, [categoryFilter, countryFilter, yearFilter, typeFilter, currentPage, sortBy, sortParam]);
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (searchBoxRef.current && !searchBoxRef.current.contains(event.target)) {
+                setShowSearchHistory(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const handleFilter = (type, value) => {
         setCurrentPage(1);
         const params = new URLSearchParams(searchParams);
@@ -101,6 +117,51 @@ function MoviesContent() {
         setSortBy('');
         setSearchQuery('');
         router.push('/movies');
+    };
+
+    const loadSearchHistory = async () => {
+        setHistoryLoading(true);
+        try {
+            const res = await getSearchHistory(10);
+            setSearchHistory(res.data || []);
+        } catch (error) {
+            console.error(error);
+            setSearchHistory([]);
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+
+    const openSearchHistory = () => {
+        setShowSearchHistory(true);
+        if (searchError) setSearchError('');
+        loadSearchHistory();
+    };
+
+    const handleSelectHistoryItem = (keyword) => {
+        setSearchQuery(keyword);
+        setShowSearchHistory(false);
+        if (searchError) setSearchError('');
+    };
+
+    const handleDeleteHistoryItem = async (event, historyId) => {
+        event.stopPropagation();
+
+        try {
+            await deleteSearchHistoryItem(historyId);
+            setSearchHistory((prev) => prev.filter((item) => item._id !== historyId));
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const handleClearAllHistory = async () => {
+        try {
+            await clearSearchHistory();
+            setSearchHistory([]);
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     const hasActiveFilters = categoryFilter || countryFilter || yearFilter || typeFilter || sortBy || searchQuery;
@@ -143,12 +204,24 @@ function MoviesContent() {
         }
     };
 
-    const handleSearchSubmit = () => {
-        if (searchQuery.trim() === '') {
+    const handleSearchSubmit = async () => {
+        const cleanKeyword = searchQuery.trim();
+
+        if (cleanKeyword === '') {
             setSearchError('Vui lòng nhập từ khóa tìm kiếm');
             return false;
         }
+
         setSearchError('');
+
+        try {
+            await saveSearchHistory(cleanKeyword);
+            await loadSearchHistory();
+        } catch (error) {
+            console.error(error);
+        }
+
+        setShowSearchHistory(false);
         return true;
     };
 
@@ -166,7 +239,7 @@ function MoviesContent() {
                 <h1 className={styles.pageTitle}>{getPageTitle()}</h1>
 
                 <div className={styles.filters}>
-                    <div className={styles.searchBox}>
+                    <div className={styles.searchBox} ref={searchBoxRef}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <circle cx="11" cy="11" r="8" />
                             <path d="m21 21-4.3-4.3" />
@@ -176,8 +249,57 @@ function MoviesContent() {
                             placeholder="Tìm kiếm phim..."
                             value={searchQuery}
                             onChange={handleSearchChange}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
+                            onFocus={openSearchHistory}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    void handleSearchSubmit();
+                                }
+                            }}
                         />
+
+                        {showSearchHistory && (
+                            <div className={styles.historyDropdown}>
+                                <div className={styles.historyHeader}>
+                                    <span>Lịch sử tìm kiếm</span>
+                                    {searchHistory.length > 0 && (
+                                        <button type="button" className={styles.historyClearAll} onClick={handleClearAllHistory}>
+                                            Xóa tất cả
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className={styles.historyList}>
+                                    {historyLoading && <p className={styles.historyEmpty}>Đang tải...</p>}
+
+                                    {!historyLoading && searchHistory.length === 0 && (
+                                        <p className={styles.historyEmpty}>Chưa có lịch sử tìm kiếm</p>
+                                    )}
+
+                                    {!historyLoading && searchHistory.map((item) => (
+                                        <div key={item._id} className={styles.historyItem}>
+                                            <button
+                                                type="button"
+                                                className={styles.historyKeyword}
+                                                onClick={() => handleSelectHistoryItem(item.keyword)}
+                                                title={item.keyword}
+                                            >
+                                                {item.keyword}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={styles.historyDelete}
+                                                onClick={(event) => handleDeleteHistoryItem(event, item._id)}
+                                                aria-label={`Xóa lịch sử ${item.keyword}`}
+                                            >
+                                                &times;
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {searchError && <span className={styles.searchError}>{searchError}</span>}
                     </div>
 
