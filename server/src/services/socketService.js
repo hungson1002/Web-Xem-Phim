@@ -3,6 +3,8 @@ import WatchRoom from '../models/WatchRoom.model.js';
 // Store active socket connections per room
 const roomSockets = new Map(); // roomCode -> Set of socket ids
 const socketRooms = new Map(); // socketId -> roomCode
+const MAX_CHAT_LENGTH = 500;
+const MAX_CHAT_HISTORY = 200;
 
 export const initializeSocket = (io) => {
     io.on('connection', (socket) => {
@@ -187,6 +189,55 @@ export const initializeSocket = (io) => {
                     currentServer: room.currentServer,
                     currentEpisode: room.currentEpisode
                 });
+            }
+        });
+
+        // Realtime chat message
+        socket.on('chat-message', async (data) => {
+            try {
+                const {
+                    roomCode,
+                    senderId,
+                    senderName,
+                    senderAvatar,
+                    text
+                } = data || {};
+
+                const upperCode = String(roomCode || '').toUpperCase();
+                const cleanText = String(text || '').trim().slice(0, MAX_CHAT_LENGTH);
+
+                if (!upperCode || !cleanText || !senderId) {
+                    return;
+                }
+
+                const messagePayload = {
+                    senderId: String(senderId),
+                    senderName: String(senderName || 'Anonymous').trim().slice(0, 60) || 'Anonymous',
+                    senderAvatar: senderAvatar || null,
+                    text: cleanText,
+                    sentAt: new Date()
+                };
+
+                const room = await WatchRoom.findOneAndUpdate(
+                    { roomCode: upperCode, isActive: true },
+                    {
+                        $push: {
+                            messages: {
+                                $each: [messagePayload],
+                                $slice: -MAX_CHAT_HISTORY
+                            }
+                        }
+                    },
+                    { new: true }
+                );
+
+                if (!room) {
+                    return;
+                }
+
+                io.to(upperCode).emit('chat-message', messagePayload);
+            } catch (error) {
+                console.error('Chat message error:', error);
             }
         });
 

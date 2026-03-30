@@ -4,7 +4,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/context/AuthContext';
 import { getMovieBySlug } from '@/lib/movies';
 import { getSocket } from '@/lib/socket';
-import { getRoom, joinRoom, leaveRoom, closeRoom } from '@/lib/watchRooms';
+import { closeRoom, getRoom, joinRoom, leaveRoom } from '@/lib/watchRooms';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -19,6 +19,8 @@ export default function WatchRoomPage() {
     const hlsRef = useRef(null);
     const isRemoteAction = useRef(false);
     const socketRef = useRef(null);
+    const chatListRef = useRef(null);
+    const playerWrapperRef = useRef(null);
 
     const [room, setRoom] = useState(null);
     const [movie, setMovie] = useState(null);
@@ -28,6 +30,12 @@ export default function WatchRoomPage() {
     const [participants, setParticipants] = useState([]);
     const [isHost, setIsHost] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [isChatOpen, setIsChatOpen] = useState(true);
+    const [showAllParticipants, setShowAllParticipants] = useState(false);
+    const [chatPanelHeight, setChatPanelHeight] = useState(0);
+    const [isMobileView, setIsMobileView] = useState(false);
 
     // Auth guard
     useEffect(() => {
@@ -47,9 +55,10 @@ export default function WatchRoomPage() {
                 const roomData = joinRes.data || joinRes;
                 setRoom(roomData);
                 setParticipants(roomData.participants || []);
-                setIsHost(roomData.host === user?._id || roomData.host === user?.id);
+                setIsHost(String(roomData.host) === String(user?._id || user?.id));
                 setCurrentServerIdx(roomData.currentServer || 0);
                 setCurrentEpIdx(roomData.currentEpisode || 0);
+                setMessages(roomData.messages || []);
 
                 // Fetch movie details
                 const movieRes = await getMovieBySlug(roomData.movieSlug);
@@ -187,6 +196,12 @@ export default function WatchRoomPage() {
             setTimeout(() => { isRemoteAction.current = false; }, 1000);
         });
 
+        // Realtime chat
+        socket.on('chat-message', (message) => {
+            if (!message?.text) return;
+            setMessages((prev) => [...prev, message]);
+        });
+
         // User joined
         socket.on('user-joined', (data) => {
             toast.success(`${data.userName} đã tham gia phòng`);
@@ -215,8 +230,67 @@ export default function WatchRoomPage() {
             socket.off('user-joined');
             socket.off('user-left');
             socket.off('room-closed');
+            socket.off('chat-message');
         };
     }, [room, user, code]);
+
+    useEffect(() => {
+        if (!chatListRef.current) return;
+        chatListRef.current.scrollTop = chatListRef.current.scrollHeight;
+    }, [messages]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const mediaQuery = window.matchMedia('(max-width: 980px)');
+        const updateView = (event) => {
+            setIsMobileView(event.matches);
+        };
+
+        setIsMobileView(mediaQuery.matches);
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', updateView);
+            return () => mediaQuery.removeEventListener('change', updateView);
+        }
+
+        mediaQuery.addListener(updateView);
+        return () => mediaQuery.removeListener(updateView);
+    }, []);
+
+    useEffect(() => {
+        if (!playerWrapperRef.current || typeof window === 'undefined') return;
+
+        const element = playerWrapperRef.current;
+
+        const updateHeight = () => {
+            const nextHeight = Math.round(element.getBoundingClientRect().height);
+            if (nextHeight > 0) {
+                setChatPanelHeight(nextHeight);
+            }
+        };
+
+        updateHeight();
+
+        let frameId = null;
+        const resizeObserver = new ResizeObserver(() => {
+            if (frameId) {
+                cancelAnimationFrame(frameId);
+            }
+            frameId = requestAnimationFrame(updateHeight);
+        });
+
+        resizeObserver.observe(element);
+        window.addEventListener('resize', updateHeight);
+
+        return () => {
+            if (frameId) {
+                cancelAnimationFrame(frameId);
+            }
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', updateHeight);
+        };
+    }, []);
 
     const refreshRoom = async () => {
         try {
@@ -302,6 +376,38 @@ export default function WatchRoomPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleSendMessage = () => {
+        const text = newMessage.trim();
+        if (!text || !socketRef.current) return;
+
+        socketRef.current.emit('chat-message', {
+            roomCode: code,
+            senderId: user?._id || user?.id,
+            senderName: user?.name || user?.email || 'Anonymous',
+            senderAvatar: user?.avatar || null,
+            text,
+        });
+
+        setNewMessage('');
+    };
+
+    const handleMessageKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    };
+
+    const formatChatTime = (value) => {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
     if (authLoading || loading) return <LoadingSpinner fullPage />;
     if (!room || !movie) return null;
 
@@ -309,13 +415,97 @@ export default function WatchRoomPage() {
     const currentServer = servers[currentServerIdx];
     const episodes = currentServer?.server_data || [];
     const currentEp = episodes[currentEpIdx];
+    const currentUserId = String(user?._id || user?.id || '');
+    const hostUserId = String(room.host || '');
+    const hasMoreParticipants = participants.length > 5;
+    const visibleParticipants = showAllParticipants ? participants : participants.slice(0, 5);
+
+    const renderChatPanel = () => (
+        <div className={styles.chatCard}>
+            <div className={styles.chatHeader}>
+                <h3>Chat phòng</h3>
+                <span className={styles.chatStatus}>Đang hoạt động</span>
+            </div>
+
+            <div ref={chatListRef} className={styles.chatList}>
+                {messages.length === 0 ? (
+                    <div className={styles.emptyChat}>
+                        <p className={styles.emptyChatTitle}>Chưa có tin nhắn nào</p>
+                        <p className={styles.emptyChatSub}>Hãy gửi lời chào để bắt đầu cuộc trò chuyện.</p>
+                    </div>
+                ) : (
+                    messages.map((msg, idx) => {
+                        const isMine = String(msg.senderId) === currentUserId;
+                        const isSenderHost = String(msg.senderId) === hostUserId;
+                        const senderInitial = (msg.senderName || 'U').charAt(0).toUpperCase();
+
+                        return (
+                            <div
+                                key={`${msg.senderId || 'u'}-${msg.sentAt || idx}-${idx}`}
+                                className={`${styles.chatRow} ${isMine ? styles.mine : ''}`}
+                            >
+                                <div className={styles.chatAvatar}>
+                                    {msg.senderAvatar ? (
+                                        <img src={msg.senderAvatar} alt={msg.senderName || 'User'} />
+                                    ) : (
+                                        <span>{senderInitial}</span>
+                                    )}
+                                </div>
+
+                                <div className={`${styles.chatMessage} ${isMine ? styles.mine : ''}`}>
+                                    <div className={styles.chatMeta}>
+                                        <span className={styles.chatSender}>
+                                            {isMine ? 'Bạn' : (msg.senderName || 'Người dùng')}
+                                        </span>
+
+                                        {isSenderHost && (
+                                            <span className={styles.chatRole}>Host</span>
+                                        )}
+
+                                        <span className={styles.chatTime}>{formatChatTime(msg.sentAt)}</span>
+                                    </div>
+                                    <p className={styles.chatText}>{msg.text}</p>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+
+            <div className={styles.chatComposer}>
+                <div className={styles.chatInputRow}>
+                    <input
+                        type="text"
+                        value={newMessage}
+                        maxLength={500}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={handleMessageKeyDown}
+                        className={styles.chatInput}
+                        placeholder="Nhập tin nhắn cho mọi người..."
+                    />
+                    <button
+                        type="button"
+                        onClick={handleSendMessage}
+                        className={styles.sendBtn}
+                        disabled={!newMessage.trim()}
+                    >
+                        Gửi
+                    </button>
+                </div>
+                <div className={styles.chatHintRow}>
+                    <span>Nhấn Enter để gửi nhanh</span>
+                    <span>{newMessage.length}/500</span>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className={styles.page}>
-            <div className={styles.layout}>
+            <div className={`${styles.layout} ${isChatOpen ? styles.chatOpen : styles.chatClosed}`}>
                 {/* Video Player Area */}
                 <div className={styles.playerArea}>
-                    <div className={styles.playerWrapper}>
+                    <div ref={playerWrapperRef} className={styles.playerWrapper}>
                         <video
                             ref={videoRef}
                             className={styles.video}
@@ -334,6 +524,24 @@ export default function WatchRoomPage() {
                             {currentServer && <span> — {currentServer.server_name}</span>}
                         </p>
                     </div>
+
+                    {isMobileView && (
+                        <section className={styles.mobileChatSection}>
+                            <button
+                                type="button"
+                                className={`${styles.chatToggle} ${styles.mobileChatToggle}`}
+                                onClick={() => setIsChatOpen((prev) => !prev)}
+                                aria-expanded={isChatOpen}
+                            >
+                                <span>{isChatOpen ? '↓' : '→'}</span>
+                                <span>{isChatOpen ? 'Thu gọn chat' : 'Mở chat'}</span>
+                            </button>
+
+                            <div className={`${styles.mobileChatContent} ${!isChatOpen ? styles.mobileChatContentHidden : ''}`}>
+                                {renderChatPanel()}
+                            </div>
+                        </section>
+                    )}
 
                     {/* Server Selection */}
                     {servers.length > 1 && (
@@ -370,61 +578,102 @@ export default function WatchRoomPage() {
                             </div>
                         </div>
                     )}
-                </div>
 
-                {/* Sidebar */}
-                <div className={styles.sidebar}>
-                    {/* Room Info */}
-                    <div className={styles.roomInfoCard}>
-                        <h3>Thông tin phòng</h3>
-                        <div className={styles.roomCodeDisplay}>
-                            <span className={styles.codeLabel}>Mã phòng</span>
-                            <div className={styles.codeRow}>
-                                <span className={styles.codeValue}>{code}</span>
-                                <button onClick={handleCopyCode} className={styles.copyBtn}>
-                                    {copied ? '✓' : '📋'}
-                                </button>
+                    <div className={styles.detailsGrid}>
+                        {/* Room Info */}
+                        <div className={styles.roomInfoCard}>
+                            <h3>Thông tin phòng</h3>
+                            <div className={styles.roomCodeDisplay}>
+                                <span className={styles.codeLabel}>Mã phòng</span>
+                                <div className={styles.codeRow}>
+                                    <span className={styles.codeValue}>{code}</span>
+                                    <button onClick={handleCopyCode} className={styles.copyBtn}>
+                                        {copied ? '✓' : '📋'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Participants */}
-                    <div className={styles.participantsCard}>
-                        <h3>Thành viên ({participants.length})</h3>
-                        <div className={styles.participantsList}>
-                            {participants.map((p, i) => (
-                                <div key={i} className={styles.participant}>
-                                    <div className={styles.participantAvatar}>
-                                        {p.avatar ? (
-                                            <img src={p.avatar} alt={p.name} />
-                                        ) : (
-                                            <span>{p.name?.charAt(0).toUpperCase()}</span>
-                                        )}
+                        {/* Participants */}
+                        <div className={styles.participantsCard}>
+                            <div className={styles.participantsHeader}>
+                                <h3 className={styles.participantsTitle}>Thành viên</h3>
+                                <span className={styles.participantsBadge}>{participants.length}</span>
+                            </div>
+
+                            <div className={styles.participantsList}>
+                                {visibleParticipants.map((p, i) => (
+                                    <div key={i} className={styles.participant}>
+                                        <div className={styles.participantAvatar}>
+                                            {p.avatar ? (
+                                                <img src={p.avatar} alt={p.name} />
+                                            ) : (
+                                                <span>{p.name?.charAt(0).toUpperCase()}</span>
+                                            )}
+                                        </div>
+                                        <span className={styles.participantName}>
+                                            {p.name}
+                                            {String(p.user) === String(room.host) && (
+                                                <span className={styles.hostTag}>👑 Host</span>
+                                            )}
+                                        </span>
                                     </div>
-                                    <span className={styles.participantName}>
-                                        {p.name}
-                                        {p.user === room.host && (
-                                            <span className={styles.hostTag}>👑 Host</span>
-                                        )}
-                                    </span>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
+
+                            {hasMoreParticipants && (
+                                <button
+                                    type="button"
+                                    className={styles.participantsToggle}
+                                    onClick={() => setShowAllParticipants((prev) => !prev)}
+                                >
+                                    {showAllParticipants
+                                        ? 'Thu gọn còn 5 người'
+                                        : `Xem thêm ${participants.length - 5} người`}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className={styles.actionsCard}>
+                            {isHost ? (
+                                <button onClick={handleCloseRoom} className={styles.closeBtn}>
+                                    Đóng phòng
+                                </button>
+                            ) : (
+                                <button onClick={handleLeaveRoom} className={styles.leaveBtn}>
+                                    Rời phòng
+                                </button>
+                            )}
                         </div>
                     </div>
-
-                    {/* Actions */}
-                    <div className={styles.actions}>
-                        {isHost ? (
-                            <button onClick={handleCloseRoom} className={styles.closeBtn}>
-                                Đóng phòng
-                            </button>
-                        ) : (
-                            <button onClick={handleLeaveRoom} className={styles.leaveBtn}>
-                                Rời phòng
-                            </button>
-                        )}
-                    </div>
                 </div>
+
+                {/* Chat Sidebar */}
+                {!isMobileView && (
+                <aside
+                    className={`${styles.chatSidebar} ${styles.desktopChatSidebar} ${isChatOpen ? styles.open : styles.closed}`}
+                    style={{ '--chat-panel-height': chatPanelHeight ? `${chatPanelHeight}px` : undefined }}
+                >
+                    <div className={styles.chatSidebarHeader}>
+                        <button
+                            type="button"
+                            className={styles.chatToggle}
+                            onClick={() => setIsChatOpen((prev) => !prev)}
+                            aria-expanded={isChatOpen}
+                        >
+                            <span>{isChatOpen ? '→' : '←'}</span>
+                            <span className={styles.chatToggleText}>
+                                {isChatOpen ? 'Thu gọn chat' : 'Mở chat'}
+                            </span>
+                        </button>
+                    </div>
+
+                    <div className={`${styles.chatContent} ${!isChatOpen ? styles.chatContentHidden : ''}`}>
+                        {renderChatPanel()}
+                    </div>
+                </aside>
+                )}
             </div>
         </div>
     );
