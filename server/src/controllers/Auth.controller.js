@@ -105,6 +105,21 @@ export const Login = async (req, res, next) => {
             })
         }
 
+        // Kiểm tra tài khoản bị xóa mềm hoặc vô hiệu hóa
+        if (auth.isDeleted) {
+            return res.status(403).json({
+                success: false,
+                message: "Tài khoản đã bị xóa"
+            })
+        }
+
+        if (!auth.isActive) {
+            return res.status(403).json({
+                success: false,
+                message: "Tài khoản đã bị vô hiệu hóa"
+            })
+        }
+
         // Tạo token
         const token = jwt.sign(
             {
@@ -128,6 +143,7 @@ export const Login = async (req, res, next) => {
                 avatar: auth.avatar || null,
                 provider: auth.provider || "local",
                 isVerified: auth.isVerified,
+                role: auth.role || 'user',
                 createdAt: auth.createdAt
             }
         })
