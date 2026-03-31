@@ -72,10 +72,10 @@ const authSchema = new mongoose.Schema(
         otpLastSentAt: {
             type: Date
         },
-        role: {
-            type: String,
-            enum: ['user', 'admin'],
-            default: 'user'
+        roleId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Role',
+            default: null
         },
         isActive: {
             type: Boolean,

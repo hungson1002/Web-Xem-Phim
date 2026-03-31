@@ -1,14 +1,27 @@
 import Auth from '../models/Auth.model.js';
+import Role from '../models/Role.model.js';
 
-// Lấy danh sách tất cả user (không bao gồm admin, không bao gồm đã xóa cứng)
+// Helper lấy roleId theo tên
+const getRoleId = async (name) => {
+    const role = await Role.findOne({ name });
+    return role?._id || null;
+};
+
+// Lấy danh sách tất cả user (không bao gồm admin)
 export const getAllUsers = async (req, res, next) => {
     try {
         const { page = 1, limit = 10, search = '', status = 'all' } = req.query;
         const skip = (page - 1) * limit;
 
-        const query = { role: { $ne: 'admin' } };
+        const adminRole = await getRoleId('admin');
 
-        // Filter theo status
+        const query = {
+            $or: [
+                { roleId: { $ne: adminRole } },
+                { roleId: null }
+            ]
+        };
+
         if (status === 'active') {
             query.isDeleted = { $ne: true };
             query.isActive = { $ne: false };
@@ -20,16 +33,21 @@ export const getAllUsers = async (req, res, next) => {
         }
 
         if (search) {
-            query.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { username: { $regex: search, $options: 'i' } }
+            query.$and = [
+                {
+                    $or: [
+                        { name: { $regex: search, $options: 'i' } },
+                        { email: { $regex: search, $options: 'i' } },
+                        { username: { $regex: search, $options: 'i' } }
+                    ]
+                }
             ];
         }
 
         const [users, total] = await Promise.all([
             Auth.find(query)
                 .select('-password -otp -otpExpires -resetOtp -resetOtpExpires')
+                .populate('roleId', 'name')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(Number(limit)),
@@ -52,7 +70,8 @@ export const getAllUsers = async (req, res, next) => {
 export const getUserDetail = async (req, res, next) => {
     try {
         const user = await Auth.findById(req.params.id)
-            .select('-password -otp -otpExpires -resetOtp -resetOtpExpires');
+            .select('-password -otp -otpExpires -resetOtp -resetOtpExpires')
+            .populate('roleId', 'name');
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User không tồn tại' });
@@ -67,13 +86,13 @@ export const getUserDetail = async (req, res, next) => {
 // Vô hiệu hóa / kích hoạt lại tài khoản
 export const toggleUserActive = async (req, res, next) => {
     try {
-        const user = await Auth.findById(req.params.id);
+        const user = await Auth.findById(req.params.id).populate('roleId');
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User không tồn tại' });
         }
 
-        if (user.role === 'admin') {
+        if (user.roleId?.name === 'admin') {
             return res.status(403).json({ success: false, message: 'Không thể thao tác với tài khoản admin' });
         }
 
@@ -93,13 +112,13 @@ export const toggleUserActive = async (req, res, next) => {
 // Xóa mềm tài khoản
 export const softDeleteUser = async (req, res, next) => {
     try {
-        const user = await Auth.findById(req.params.id);
+        const user = await Auth.findById(req.params.id).populate('roleId');
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User không tồn tại' });
         }
 
-        if (user.role === 'admin') {
+        if (user.roleId?.name === 'admin') {
             return res.status(403).json({ success: false, message: 'Không thể xóa tài khoản admin' });
         }
 

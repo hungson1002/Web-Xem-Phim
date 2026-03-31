@@ -25,8 +25,8 @@ export const verifyToken = (req, res, next) => {
 
 export const isAdmin = async (req, res, next) => {
     try {
-        const user = await Auth.findById(req.authId);
-        if (!user || user.role !== 'admin') {
+        const user = await Auth.findById(req.authId).populate('roleId');
+        if (!user || user.roleId?.name !== 'admin') {
             return res.status(403).json({ success: false, message: "Không có quyền truy cập" });
         }
         next();

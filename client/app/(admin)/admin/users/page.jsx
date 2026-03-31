@@ -190,9 +190,12 @@ export default function AdminUsersPage() {
                                                     </button>
                                                 </>
                                             ) : (
-                                                <button className={styles.btnEnable} onClick={() => handleRestore(u._id)}>
-                                                    Khôi phục
-                                                </button>
+                                                <>
+                                                    <button className={styles.btnEnable} onClick={() => handleRestore(u._id)}>
+                                                        Khôi phục
+                                                    </button>
+                                                    <span className={styles.btnPlaceholder} />
+                                                </>
                                             )}
                                         </td>
                                     </tr>
