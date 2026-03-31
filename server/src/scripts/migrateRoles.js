@@ -5,6 +5,9 @@ import Role from '../models/Role.model.js';
 
 dotenv.config();
 
+// Điền email hoặc username của tài khoản admin vào đây
+const ADMIN_EMAILS = ['ngoctrucnguyen3012@gmail.com'];
+
 const migrate = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('MongoDB connected');
@@ -20,21 +23,26 @@ const migrate = async () => {
         { name: 'admin', description: 'Administrator' },
         { upsert: true, new: true }
     );
-    console.log('Roles created:', userRole._id, adminRole._id);
+    console.log('Roles seeded - user:', userRole._id, '| admin:', adminRole._id);
 
-    // 2. Gán adminRole cho user có role: 'admin' (field cũ)
+    // 2. Gán adminRole cho các tài khoản admin theo email
     const adminResult = await Auth.updateMany(
-        { role: 'admin' },
-        { $set: { roleId: adminRole._id }, $unset: { role: '' } }
+        { email: { $in: ADMIN_EMAILS } },
+        { $set: { roleId: adminRole._id } }
     );
-    console.log(`Admin users migrated: ${adminResult.modifiedCount}`);
+    console.log(`Admin users updated: ${adminResult.modifiedCount}`);
 
-    // 3. Gán userRole cho tất cả user còn lại chưa có roleId
+    // 3. Gán userRole cho tất cả user còn lại chưa có roleId hoặc roleId là null
     const userResult = await Auth.updateMany(
-        { roleId: { $exists: false } },
-        { $set: { roleId: userRole._id }, $unset: { role: '' } }
+        { $or: [{ roleId: { $exists: false } }, { roleId: null }] },
+        { $set: { roleId: userRole._id } }
     );
-    console.log(`Regular users migrated: ${userResult.modifiedCount}`);
+    console.log(`Regular users updated: ${userResult.modifiedCount}`);
+
+    // 4. Verify
+    const adminCount = await Auth.countDocuments({ roleId: adminRole._id });
+    const userCount = await Auth.countDocuments({ roleId: userRole._id });
+    console.log(`\nResult: ${adminCount} admin(s), ${userCount} user(s)`);
 
     await mongoose.disconnect();
     console.log('Done!');

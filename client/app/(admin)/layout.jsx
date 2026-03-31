@@ -124,11 +124,12 @@ function AdminSidebar() {
 export default function AdminLayout({ children }) {
     const { user, loading } = useAuth();
     const router = useRouter();
-    const { theme } = useTheme?.() || { theme: 'dark' };
 
     useEffect(() => {
-        if (!loading && (!user || user.role !== 'admin')) {
+        if (!loading && !user) {
             router.replace('/login');
+        } else if (!loading && user && user.role !== 'admin') {
+            router.replace('/403');
         }
     }, [user, loading]);
 
@@ -147,8 +148,10 @@ function AdminLayoutInner({ children }) {
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && (!user || user.role !== 'admin')) {
+        if (!loading && !user) {
             router.replace('/login');
+        } else if (!loading && user && user.role !== 'admin') {
+            router.replace('/403');
         }
     }, [user, loading]);
 
