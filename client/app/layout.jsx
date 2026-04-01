@@ -1,6 +1,5 @@
-import Footer from '@/components/Footer';
-import Navbar from '@/components/Navbar';
 import { AuthProvider } from '@/context/AuthContext';
+import RootLayoutClient from '@/components/RootLayoutClient';
 import { Toaster } from 'react-hot-toast';
 import './globals.css';
 
@@ -27,22 +26,14 @@ export default function RootLayout({ children }) {
                                 cursor: 'pointer',
                             },
                             success: {
-                                iconTheme: {
-                                    primary: '#10b981',
-                                    secondary: '#fff',
-                                },
+                                iconTheme: { primary: '#10b981', secondary: '#fff' },
                             },
                             error: {
-                                iconTheme: {
-                                    primary: '#ef4444',
-                                    secondary: '#fff',
-                                },
+                                iconTheme: { primary: '#ef4444', secondary: '#fff' },
                             },
                         }}
                     />
-                    <Navbar />
-                    <main>{children}</main>
-                    <Footer />
+                    <RootLayoutClient>{children}</RootLayoutClient>
                 </AuthProvider>
             </body>
         </html>

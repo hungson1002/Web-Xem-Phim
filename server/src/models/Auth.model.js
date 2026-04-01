@@ -72,6 +72,23 @@ const authSchema = new mongoose.Schema(
         otpLastSentAt: {
             type: Date
         },
+        roleId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Role',
+            default: null
+        },
+        isActive: {
+            type: Boolean,
+            default: true
+        },
+        isDeleted: {
+            type: Boolean,
+            default: false
+        },
+        deletedAt: {
+            type: Date,
+            default: null
+        }
     },
     {
         timestamps: true

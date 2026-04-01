@@ -4,6 +4,7 @@ import express from 'express';
 import { createServer } from 'http';
 import mongoose from 'mongoose';
 import { Server } from 'socket.io';
+import AdminRoute from './routes/Admin.route.js';
 import AuthRoute from './routes/Auth.route.js';
 import BookmarkRoute from './routes/Bookmark.route.js';
 import CategoryRoute from './routes/Category.routes.js';
@@ -58,6 +59,7 @@ connectDB();
 
 // Routes
 app.use('/api/auth', AuthRoute);
+app.use('/api/admin', AdminRoute);
 app.use('/api/user', UserRoute);
 app.use('/api/comments', CommentRoute);
 app.use('/api/categories', CategoryRoute);

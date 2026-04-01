@@ -1,0 +1,313 @@
+.container {
+    color: var(--text-primary);
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.title {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.total {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* ── Toolbar ── */
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.searchBar {
+    flex: 1;
+    min-width: 200px;
+}
+
+.searchWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 12px;
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 9px 44px 9px 38px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.searchInput:focus {
+    border-color: var(--accent-primary);
+    outline: none;
+}
+
+.searchBtn {
+    position: absolute;
+    right: 6px;
+    width: 30px;
+    height: 30px;
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    padding: 0;
+}
+
+.searchBtn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ── Filter ── */
+.filterGroup {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.filterBtn {
+    padding: 7px 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.filterBtn:hover {
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+}
+
+.filterActive {
+    background: rgba(255, 77, 109, 0.12);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.loading {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 60px 0;
+}
+
+.empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 60px 0;
+    font-size: 0.95rem;
+}
+
+.tableWrapper {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.table th {
+    background: var(--bg-secondary);
+    padding: 12px 16px;
+    text-align: left;
+    color: var(--text-secondary);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.table td {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color);
+    vertical-align: middle;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Cột avatar và actions không bị truncate */
+.table td:first-child,
+.table td:last-child {
+    max-width: unset;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.deletedRow td {
+    opacity: 0.5;
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+    text-align: center;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.avatarPlaceholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.badgeActive {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badgeInactive {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badgeDeleted {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+
+.btnDetail {
+    padding: 5px 12px;
+    background: rgba(99, 179, 237, 0.1);
+    color: #63b3ed;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.btnDisable {
+    padding: 5px 12px;
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.btnEnable {
+    padding: 5px 12px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.btnDelete {
+    padding: 5px 12px;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.btnPlaceholder {
+    display: inline-block;
+    padding: 5px 12px;
+    min-width: 38px;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.pageBtn {
+    padding: 8px 18px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: border-color var(--transition-fast);
+}
+
+.pageBtn:hover:not(:disabled) {
+    border-color: var(--accent-primary);
+}
+
+.pageBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.pageInfo {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}

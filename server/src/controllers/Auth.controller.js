@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import Auth from '../models/Auth.model.js';
+import Role from '../models/Role.model.js';
 import { sendOTPEmail } from '../utils/sendEmail.js';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -48,6 +49,7 @@ export const Register = async (req, res, next) => {
         const otpExpires = Date.now() + 5 * 60 * 1000;
 
         // Lưu dữ liệu vào mongo
+        const userRole = await Role.findOne({ name: 'user' });
         await Auth.create({
             name,
             email,
@@ -55,7 +57,8 @@ export const Register = async (req, res, next) => {
             password: hashPassword,
             otp,
             otpExpires,
-            isVerified: false
+            isVerified: false,
+            roleId: userRole?._id || null
         })
 
         // Gửi mã OTP qua email
@@ -79,7 +82,7 @@ export const Login = async (req, res, next) => {
 
         const auth = await Auth.findOne({
             $or: [{ email: email }, { username: email }]
-        });
+        }).populate('roleId');
 
         if (!auth) {
             return res.status(400).json({
@@ -105,10 +108,26 @@ export const Login = async (req, res, next) => {
             })
         }
 
+        // Kiểm tra tài khoản bị xóa mềm hoặc vô hiệu hóa
+        if (auth.isDeleted) {
+            return res.status(403).json({
+                success: false,
+                message: "Tài khoản đã bị xóa"
+            })
+        }
+
+        if (!auth.isActive) {
+            return res.status(403).json({
+                success: false,
+                message: "Tài khoản đã bị vô hiệu hóa"
+            })
+        }
+
         // Tạo token
         const token = jwt.sign(
             {
-                authID: auth._id
+                authID: auth._id,
+                role: auth.roleId?.name || 'user'
             },
             process.env.JWT_SECRET,
             {
@@ -128,6 +147,7 @@ export const Login = async (req, res, next) => {
                 avatar: auth.avatar || null,
                 provider: auth.provider || "local",
                 isVerified: auth.isVerified,
+                role: auth.roleId?.name || 'user',
                 createdAt: auth.createdAt
             }
         })
@@ -206,14 +226,16 @@ export const GoogleLogin = async (req, res, next) => {
 
         // Tạo user mới nếu chưa tồn tại
         if (!auth) {
+            const userRole = await Role.findOne({ name: 'user' });
             auth = await Auth.create({
                 name,
                 email,
-                username: email.split('@')[0] + Math.floor(Math.random() * 10000), // Auto-generate unique username
+                username: email.split('@')[0] + Math.floor(Math.random() * 10000),
                 googleId,
                 avatar: payload.picture,
                 provider: 'google',
-                isVerified: true
+                isVerified: true,
+                roleId: userRole?._id || null
             });
             console.log('Google Login - Created new user:', auth._id);
         } else {

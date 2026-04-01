@@ -10,7 +10,7 @@ import styles from './auth.module.css';
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, isAuthenticated } = useAuth();
+    const { login, isAuthenticated, user } = useAuth();
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -21,7 +21,7 @@ export default function LoginPage() {
     // Redirect nếu đã đăng nhập
     useEffect(() => {
         if (isAuthenticated) {
-            router.push('/');
+            router.push(user?.role === 'admin' ? '/admin/dashboard' : '/');
         }
     }, [isAuthenticated, router]);
 
@@ -93,7 +93,7 @@ export default function LoginPage() {
             const res = await loginApi({ email: emailTrimmed, password });
             login(res.auth, res.token);
             toast.success('Đăng nhập thành công!');
-            router.push('/');
+            router.push(res.auth?.role === 'admin' ? '/admin/dashboard' : '/');
         } catch (err) {
             setError(err.response?.data?.message || 'Đăng nhập thất bại');
         } finally {

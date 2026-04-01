@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import Auth from '../models/Auth.model.js';
 
 export const verifyToken = (req, res, next) => {
     try {
@@ -10,21 +11,26 @@ export const verifyToken = (req, res, next) => {
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // --- QUAN TRỌNG: In ra để kiểm tra xem Token chứa key gì ---
-        console.log("Check Token Decoded:", decoded);
-
-        // Thử lấy ID từ các key phổ biến (id, _id, userId, authID)
-        // Dù lúc Login bạn lưu tên gì thì dòng này cũng bắt được hết
         req.authId = decoded.id || decoded._id || decoded.userId || decoded.authID;
 
         if (!req.authId) {
-            console.log("❌ Lỗi: Token hợp lệ nhưng không tìm thấy ID user bên trong!");
             return res.status(403).json({ success: false, message: "Token malformed: Missing ID" });
         }
 
         next();
     } catch (error) {
-        console.log("❌ Lỗi Middleware:", error.message);
         return res.status(401).json({ success: false, message: "Invalid token" });
+    }
+}
+
+export const isAdmin = async (req, res, next) => {
+    try {
+        const user = await Auth.findById(req.authId).populate('roleId');
+        if (!user || user.roleId?.name !== 'admin') {
+            return res.status(403).json({ success: false, message: "Không có quyền truy cập" });
+        }
+        next();
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Server error" });
     }
 }
