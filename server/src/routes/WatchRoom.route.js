@@ -1,35 +1,307 @@
 import express from 'express';
-import {
-    closeRoom,
-    createRoom,
-    getRoom,
-    getRooms,
-    joinRoom,
-    leaveRoom
-} from '../controllers/WatchRoom.controller.js';
+import Auth from '../models/Auth.model.js';
+import ChatMessage from '../models/ChatMessage.model.js';
+import WatchRoom from '../models/WatchRoom.model.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+const MAX_CHAT_HISTORY = 200;
+
+const generateRoomCode = async () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code;
+    let exists = true;
+
+    while (exists) {
+        code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        exists = await WatchRoom.findOne({ roomCode: code, isActive: true });
+    }
+
+    return code;
+};
+
+const getUserInfo = async (authId) => {
+    const user = await Auth.findById(authId).select('name email avatar');
+    if (!user) return null;
+    return {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || null
+    };
+};
+
+const getRecentMessages = async (roomId) => {
+    const messages = await ChatMessage.find({ room: roomId })
+        .sort({ sentAt: -1 })
+        .limit(MAX_CHAT_HISTORY)
+        .select('-_id senderId senderName senderAvatar text sentAt')
+        .lean();
+
+    return messages.reverse();
+};
+
+const buildRoomResponse = async (roomDoc) => {
+    const roomData = roomDoc.toObject();
+    roomData.messages = await getRecentMessages(roomDoc._id);
+    return roomData;
+};
 
 // All routes require authentication
 router.use(verifyToken);
 
-// Create a new room
-router.post('/', createRoom);
+router.post('/', async function(req, res) {
+    try {
+        const { movieSlug, movieName, moviePoster } = req.body;
+        const authId = req.authId;
 
-// Get all active rooms
-router.get('/', getRooms);
+        const user = await getUserInfo(authId);
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
 
-// Get room by code
-router.get('/:code', getRoom);
+        if (!movieSlug || !movieName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Movie slug and name are required'
+            });
+        }
 
-// Join a room
-router.post('/:code/join', joinRoom);
+        const roomCode = await generateRoomCode();
 
-// Leave a room
-router.post('/:code/leave', leaveRoom);
+        const room = new WatchRoom({
+            roomCode,
+            movieSlug,
+            movieName,
+            moviePoster: moviePoster || '',
+            host: user.id,
+            hostName: user.name || user.email,
+            participants: [{
+                user: user.id,
+                name: user.name || user.email,
+                avatar: user.avatar
+            }]
+        });
 
-// Close a room (host only)
-router.delete('/:code', closeRoom);
+        await room.save();
+
+        return res.status(201).json({
+            success: true,
+            message: 'Room created successfully',
+            data: room
+        });
+    } catch (error) {
+        console.error('Create room error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to create room'
+        });
+    }
+});
+
+router.get('/', async function(req, res) {
+    try {
+        const rooms = await WatchRoom.find({ isActive: true })
+            .sort({ createdAt: -1 })
+            .select('-__v');
+
+        return res.json({
+            success: true,
+            data: rooms
+        });
+    } catch (error) {
+        console.error('Get rooms error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to get rooms'
+        });
+    }
+});
+
+router.get('/:code', async function(req, res) {
+    try {
+        const { code } = req.params;
+
+        const room = await WatchRoom.findOne({
+            roomCode: code.toUpperCase(),
+            isActive: true
+        });
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: 'Room not found'
+            });
+        }
+
+        const roomData = await buildRoomResponse(room);
+
+        return res.json({
+            success: true,
+            data: roomData
+        });
+    } catch (error) {
+        console.error('Get room error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to get room'
+        });
+    }
+});
+
+router.post('/:code/join', async function(req, res) {
+    try {
+        const { code } = req.params;
+        const authId = req.authId;
+
+        const user = await getUserInfo(authId);
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        const room = await WatchRoom.findOne({
+            roomCode: code.toUpperCase(),
+            isActive: true
+        });
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: 'Room not found'
+            });
+        }
+
+        const alreadyJoined = room.participants.some(
+            (p) => p.user.toString() === user.id
+        );
+
+        if (alreadyJoined) {
+            const roomData = await buildRoomResponse(room);
+            return res.json({
+                success: true,
+                message: 'Already in room',
+                data: roomData
+            });
+        }
+
+        if (room.participants.length >= room.maxParticipants) {
+            return res.status(400).json({
+                success: false,
+                message: 'Room is full'
+            });
+        }
+
+        room.participants.push({
+            user: user.id,
+            name: user.name || user.email,
+            avatar: user.avatar
+        });
+
+        await room.save();
+
+        const roomData = await buildRoomResponse(room);
+
+        return res.json({
+            success: true,
+            message: 'Joined room successfully',
+            data: roomData
+        });
+    } catch (error) {
+        console.error('Join room error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to join room'
+        });
+    }
+});
+
+router.post('/:code/leave', async function(req, res) {
+    try {
+        const { code } = req.params;
+        const authId = req.authId;
+
+        const room = await WatchRoom.findOne({
+            roomCode: code.toUpperCase(),
+            isActive: true
+        });
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: 'Room not found'
+            });
+        }
+
+        room.participants = room.participants.filter(
+            (p) => p.user.toString() !== authId
+        );
+
+        if (room.host.toString() === authId) {
+            room.isActive = false;
+        }
+
+        await room.save();
+
+        return res.json({
+            success: true,
+            message: room.isActive ? 'Left room successfully' : 'Room closed'
+        });
+    } catch (error) {
+        console.error('Leave room error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to leave room'
+        });
+    }
+});
+
+router.delete('/:code', async function(req, res) {
+    try {
+        const { code } = req.params;
+        const authId = req.authId;
+
+        const room = await WatchRoom.findOne({
+            roomCode: code.toUpperCase(),
+            isActive: true
+        });
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: 'Room not found'
+            });
+        }
+
+        if (room.host.toString() !== authId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Only host can close the room'
+            });
+        }
+
+        room.isActive = false;
+        await room.save();
+
+        return res.json({
+            success: true,
+            message: 'Room closed successfully'
+        });
+    } catch (error) {
+        console.error('Close room error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to close room'
+        });
+    }
+});
 
 export default router;
