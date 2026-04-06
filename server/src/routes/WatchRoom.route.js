@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Auth from '../models/Auth.model.js';
 import ChatMessage from '../models/ChatMessage.model.js';
 import WatchRoom from '../models/WatchRoom.model.js';
@@ -48,6 +49,37 @@ const buildRoomResponse = async (roomDoc) => {
     const roomData = roomDoc.toObject();
     roomData.messages = await getRecentMessages(roomDoc._id);
     return roomData;
+};
+
+const isTransactionUnsupported = (error) => {
+    const message = String(error?.message || '');
+    return message.includes('Transaction numbers are only allowed on a replica set member or mongos');
+};
+
+const runWithOptionalTransaction = async (work) => {
+    const session = await mongoose.startSession();
+    try {
+        let result;
+        await session.withTransaction(async () => {
+            result = await work(session);
+        });
+        return result;
+    } catch (error) {
+        if (isTransactionUnsupported(error)) {
+            console.warn('MongoDB deployment does not support transactions. Running without transaction.');
+            return work(null);
+        }
+        throw error;
+    } finally {
+        await session.endSession();
+    }
+};
+
+const applySession = (query, session) => {
+    if (session) {
+        query.session(session);
+    }
+    return query;
 };
 
 // All routes require authentication
@@ -229,31 +261,42 @@ router.post('/:code/leave', async function(req, res) {
         const { code } = req.params;
         const authId = req.authId;
 
-        const room = await WatchRoom.findOne({
-            roomCode: code.toUpperCase(),
-            isActive: true
+        const result = await runWithOptionalTransaction(async (session) => {
+            const room = await applySession(
+                WatchRoom.findOne({
+                    roomCode: code.toUpperCase(),
+                    isActive: true
+                }),
+                session
+            );
+
+            if (!room) {
+                return { notFound: true };
+            }
+
+            room.participants = room.participants.filter(
+                (p) => p.user.toString() !== authId
+            );
+
+            if (room.host.toString() === authId) {
+                room.isActive = false;
+                await ChatMessage.deleteMany({ room: room._id }, session ? { session } : {});
+            }
+
+            await room.save(session ? { session } : {});
+            return { roomClosed: !room.isActive };
         });
 
-        if (!room) {
+        if (result?.notFound) {
             return res.status(404).json({
                 success: false,
                 message: 'Room not found'
             });
         }
 
-        room.participants = room.participants.filter(
-            (p) => p.user.toString() !== authId
-        );
-
-        if (room.host.toString() === authId) {
-            room.isActive = false;
-        }
-
-        await room.save();
-
         return res.json({
             success: true,
-            message: room.isActive ? 'Left room successfully' : 'Room closed'
+            message: result?.roomClosed ? 'Room closed' : 'Left room successfully'
         });
     } catch (error) {
         console.error('Leave room error:', error);
@@ -269,27 +312,42 @@ router.delete('/:code', async function(req, res) {
         const { code } = req.params;
         const authId = req.authId;
 
-        const room = await WatchRoom.findOne({
-            roomCode: code.toUpperCase(),
-            isActive: true
+        const result = await runWithOptionalTransaction(async (session) => {
+            const room = await applySession(
+                WatchRoom.findOne({
+                    roomCode: code.toUpperCase(),
+                    isActive: true
+                }),
+                session
+            );
+
+            if (!room) {
+                return { notFound: true };
+            }
+
+            if (room.host.toString() !== authId) {
+                return { forbidden: true };
+            }
+
+            room.isActive = false;
+            await room.save(session ? { session } : {});
+            await ChatMessage.deleteMany({ room: room._id }, session ? { session } : {});
+            return { success: true };
         });
 
-        if (!room) {
+        if (result?.notFound) {
             return res.status(404).json({
                 success: false,
                 message: 'Room not found'
             });
         }
 
-        if (room.host.toString() !== authId) {
+        if (result?.forbidden) {
             return res.status(403).json({
                 success: false,
                 message: 'Only host can close the room'
             });
         }
-
-        room.isActive = false;
-        await room.save();
 
         return res.json({
             success: true,
