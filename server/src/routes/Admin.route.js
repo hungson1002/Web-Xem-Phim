@@ -10,7 +10,6 @@ const getRoleId = async (name) => {
     return role?._id || null;
 };
 
-// Tất cả routes admin đều cần xác thực + quyền admin
 router.use(verifyToken, isAdmin);
 
 router.get('/users', async function(req, res) {

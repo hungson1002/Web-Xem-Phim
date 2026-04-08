@@ -4,7 +4,6 @@ import Bookmark from '../models/Bookmark.model.js';
 
 const router = express.Router();
 
-// All routes require authentication
 router.get('/', verifyToken, async function(req, res) {
     try {
         const userId = req.authId;
